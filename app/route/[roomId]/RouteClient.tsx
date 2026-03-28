@@ -1268,7 +1268,7 @@ export default function RouteClient({
         <div className={`flex-1 ${libraryPosition === 'sidebar' ? 'flex' : 'flex flex-col'} overflow-hidden`}>
           {/* Left Pane - Route */}
           <div className={`flex-1 flex flex-col overflow-hidden ${libraryPosition === 'sidebar' ? 'border-r' : 'border-b'} border-[var(--border-standard)]`}>
-            <div className="flex-1 p-4 overflow-y-auto">
+            <div className={`flex-1 p-4 overflow-y-auto ${steps.length === 0 ? 'flex items-center justify-center' : ''}`}>
               {/* Task List */}
               <div className="flex flex-col gap-2" suppressHydrationWarning>
                 {/* Column Headers */}
@@ -1299,20 +1299,19 @@ export default function RouteClient({
                   </div>
                 )}
 
-                <div ref={setRouteDropRef} className="min-h-[200px] flex flex-col gap-0.5">
+                <div ref={setRouteDropRef} className={`flex flex-col gap-0.5 ${steps.length === 0 ? 'flex-1 min-h-full' : ''}`}>
+                  {/* Empty state */}
+                  {steps.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center gap-3 text-center">
+                      <p className="text-[var(--text-tertiary)] text-lg">
+                        {isAdmin ? 'Drag tasks here or click + to add' : 'No tasks yet'}
+                      </p>
+                    </div>
+                  ) : (
                   <SortableContext
                     items={steps.map((s) => s.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {/* Empty state placeholder */}
-                    {steps.length === 0 && (
-                      <div className="flex-1 flex items-center justify-center min-h-[200px] border-2 border-dashed border-[var(--border-subtle)] rounded-lg">
-                        <p className="text-[var(--text-tertiary)] text-sm">
-                          {isAdmin ? 'Drag tasks here or click + to add' : 'No tasks yet'}
-                        </p>
-                      </div>
-                    )}
-
                     {/* Milestones before first task */}
                   {milestones
                     .filter(m => m.insertAfterIndex === -1)
@@ -1401,13 +1400,8 @@ export default function RouteClient({
                       </Fragment>
                     );
                   })}
-
-                  {steps.length === 0 && (
-                    <p className="text-[var(--text-tertiary)] text-center py-12 text-sm">
-                      No tasks yet. {isAdmin && 'Drag tasks from the library or add a custom task.'}
-                    </p>
-                  )}
                   </SortableContext>
+                  )}
                 </div>
               </div>
           </div>
