@@ -1304,6 +1304,15 @@ export default function RouteClient({
                     items={steps.map((s) => s.id)}
                     strategy={verticalListSortingStrategy}
                   >
+                    {/* Empty state placeholder */}
+                    {steps.length === 0 && (
+                      <div className="flex-1 flex items-center justify-center min-h-[200px] border-2 border-dashed border-[var(--border-subtle)] rounded-lg">
+                        <p className="text-[var(--text-tertiary)] text-sm">
+                          {isAdmin ? 'Drag tasks here or click + to add' : 'No tasks yet'}
+                        </p>
+                      </div>
+                    )}
+
                     {/* Milestones before first task */}
                   {milestones
                     .filter(m => m.insertAfterIndex === -1)
