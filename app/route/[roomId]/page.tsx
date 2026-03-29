@@ -33,5 +33,24 @@ export default async function RoutePage({
     .eq('room_id', roomId)
     .order('step_order', { ascending: true });
 
-  return <RouteClient room={room} initialSteps={steps || []} />;
+  // Fetch relics and regions for milestone selection
+  const { data: relics } = await supabase
+    .from('official_relics')
+    .select('*')
+    .order('tier', { ascending: true })
+    .order('display_order', { ascending: true });
+
+  const { data: regions } = await supabase
+    .from('official_regions')
+    .select('*')
+    .order('display_order', { ascending: true });
+
+  return (
+    <RouteClient
+      room={room}
+      initialSteps={steps || []}
+      relics={relics || []}
+      regions={regions || []}
+    />
+  );
 }

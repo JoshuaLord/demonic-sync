@@ -179,6 +179,26 @@ button:active:not(:disabled) {
   animation: chip-bounce 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
+/* Drag overlay enter animation */
+@keyframes overlay-enter {
+  from { transform: scale(1.05); opacity: 0.8; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-overlay-enter {
+  animation: overlay-enter 0.15s ease-out;
+}
+
+/* Task insertion animation - when a task is dropped into route */
+@keyframes task-insert {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-task-insert {
+  animation: task-insert 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
 /* Custom checkbox styling */
 input[type="checkbox"] {
   appearance: none;

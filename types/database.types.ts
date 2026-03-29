@@ -34,6 +34,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      official_regions: {
+        Row: {
+          created_at: string | null
+          display_order: number
+          id: number
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order: number
+          id?: number
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      official_relics: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_order: number
+          id: number
+          name: string
+          tier: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_order: number
+          id?: number
+          name: string
+          tier: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number
+          id?: number
+          name?: string
+          tier?: number
+        }
+        Relationships: []
+      }
       official_tasks: {
         Row: {
           category: string | null
