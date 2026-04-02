@@ -1,6 +1,7 @@
 'use client';
 
 import { Pencil } from 'lucide-react';
+import ThemeToggle from '@/components/ThemeToggle';
 import PresenceAvatars from './PresenceAvatars';
 import type { PresenceUser } from '../hooks/usePresence';
 
@@ -184,6 +185,7 @@ export default function RouteHeader({
               </button>
             </>
           )}
+          <ThemeToggle />
         </div>
         </div>
       </div>

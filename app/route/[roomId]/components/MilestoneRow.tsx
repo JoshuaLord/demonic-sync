@@ -1,15 +1,14 @@
 'use client';
 
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useRef, useEffect } from 'react';
+import { Check } from 'lucide-react';
 import { Milestone } from '@/lib/milestones';
-import { OfficialRelic, OfficialRegion, MilestoneSelections } from '@/types';
-
-type PlayerNames = Record<string, string>;
+import { OfficialRelic, MilestoneSelections } from '@/types';
 
 export interface MilestoneRowProps {
   milestone: Milestone;
   playerIds: string[];
-  playerNames: PlayerNames;
+  playerNames: Record<string, string>;
   milestonePlayerState: Record<string, Record<string, boolean>>;
   milestoneSelections: MilestoneSelections;
   relics: OfficialRelic[];
@@ -23,7 +22,6 @@ export interface MilestoneRowProps {
 const MilestoneRow = memo(function MilestoneRow({
   milestone,
   playerIds,
-  playerNames,
   milestonePlayerState,
   milestoneSelections,
   relics,
@@ -34,6 +32,9 @@ const MilestoneRow = memo(function MilestoneRow({
   onMilestoneSelection
 }: MilestoneRowProps) {
   const [bouncingCheckbox, setBouncingCheckbox] = useState<string | null>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const handleCheckboxToggle = useCallback((milestoneId: string, playerId: string) => {
     const checkboxKey = `${milestoneId}-${playerId}`;
@@ -41,6 +42,21 @@ const MilestoneRow = memo(function MilestoneRow({
     onToggleMilestoneCheckbox(milestoneId, playerId);
     setTimeout(() => setBouncingCheckbox(null), 400);
   }, [onToggleMilestoneCheckbox]);
+
+  // Close popover on outside click
+  useEffect(() => {
+    if (!popoverOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (
+        popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(e.target as Node)
+      ) {
+        setPopoverOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [popoverOpen]);
 
   const isRelic = milestone.type === 'relic';
   const thresholdText = isRelic
@@ -56,8 +72,10 @@ const MilestoneRow = memo(function MilestoneRow({
     ? options.find(opt => opt.id === selectedId)
     : null;
 
+  const placeholder = isRelic ? 'Select Relic...' : 'Select Region...';
+
   return (
-    <div className="bg-gradient-to-r from-[var(--crimson-glow)] to-transparent border-l-2 border-[var(--crimson)] rounded-md p-1.5 flex gap-2 items-center transition-all duration-200 hover:shadow-lg hover:shadow-[var(--crimson)]/30 hover:-translate-y-1">
+    <div className="bg-gradient-to-r from-[var(--milestone-glow)] to-transparent border-l-2 border-[var(--crimson)] rounded-md p-1.5 flex gap-2 items-center transition-all duration-200 hover:shadow-lg hover:shadow-[var(--crimson)]/30 hover:-translate-y-1">
       {isAdmin && <div className="w-[14px] flex-shrink-0"></div>}
 
       <div className="flex-1 min-w-0 flex items-center gap-2">
@@ -79,33 +97,51 @@ const MilestoneRow = memo(function MilestoneRow({
           ({thresholdText})
         </span>
 
-        <div className="ml-auto flex items-center gap-2">
-          {selectedItem && (
-            <span className="text-xs text-[var(--gold)] font-bold">
-              {selectedItem.name}
-            </span>
-          )}
-          <select
-            value={selectedId || ''}
-            onChange={(e) => {
-              const value = e.target.value;
-              onMilestoneSelection(
-                milestone.id,
-                value === '' ? null : parseInt(value, 10)
-              );
-            }}
+        <div className="ml-auto relative">
+          <button
+            ref={buttonRef}
+            onClick={() => setPopoverOpen(!popoverOpen)}
             disabled={!isAdmin}
-            className="w-36 bg-[var(--bg-surface)] border border-[var(--border-standard)] rounded-md px-2 py-1 text-xs font-semibold text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 bg-[var(--bg-surface)] border border-[var(--border-standard)] rounded-md px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:border-[var(--gold)] focus:outline-none focus:border-[var(--gold)]"
           >
-            <option value="">
-              {isRelic ? 'Select Relic...' : 'Select Region...'}
-            </option>
-            {options.map((opt) => (
-              <option key={opt.id} value={opt.id}>
-                {opt.name}
-              </option>
-            ))}
-          </select>
+            <span className={selectedItem ? 'text-[var(--gold)]' : 'text-[var(--text-tertiary)]'}>
+              {selectedItem ? selectedItem.name : placeholder}
+            </span>
+          </button>
+
+          {popoverOpen && (
+            <div
+              ref={popoverRef}
+              className="absolute top-full left-0 mt-1 min-w-[220px] max-h-[280px] overflow-y-auto bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg shadow-xl z-50"
+            >
+              {options.map((opt) => {
+                const isSelected = opt.id === selectedId;
+                const relic = isRelic ? (opt as OfficialRelic) : null;
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => {
+                      onMilestoneSelection(milestone.id, isSelected ? null : opt.id);
+                      setPopoverOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors hover:bg-[var(--bg-hover)] ${
+                      isSelected ? 'text-[var(--gold)] font-bold' : 'text-[var(--text-primary)]'
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold">{opt.name}</div>
+                      {relic?.description && (
+                        <div className="text-[var(--text-tertiary)] text-[10px] mt-0.5 leading-tight">
+                          {relic.description}
+                        </div>
+                      )}
+                    </div>
+                    {isSelected && <Check size={14} className="flex-shrink-0 text-[var(--gold)]" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

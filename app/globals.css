@@ -1,26 +1,23 @@
 @import "tailwindcss";
 
-/* Force dark mode colors always */
-@media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: dark;
-  }
-}
+/* ============================================
+   THEME VARIABLES
+   ============================================ */
 
-/* OSRS Leagues - Modern Gaming Dashboard (Dark Gray Theme) */
-:root {
+/* Default: Dark theme */
+:root, .dark {
   color-scheme: dark;
-  /* Dark Gray Background (matches TaskLibrary) */
-  --bg-base: #111827;        /* gray-900 */
-  --bg-elevated: #1f2937;    /* gray-800 */
-  --bg-surface: #374151;     /* gray-700 */
-  --bg-hover: #4b5563;       /* gray-600 */
+  /* Dark Gray Background */
+  --bg-base: #111827;
+  --bg-elevated: #1f2937;
+  --bg-surface: #374151;
+  --bg-hover: #4b5563;
 
   /* Text Hierarchy */
   --text-primary: #ffffff;
-  --text-secondary: #d1d5db; /* gray-300 */
-  --text-tertiary: #9ca3af;  /* gray-400 */
-  --text-muted: #6b7280;     /* gray-500 */
+  --text-secondary: #d1d5db;
+  --text-tertiary: #9ca3af;
+  --text-muted: #6b7280;
 
   /* Borders */
   --border-subtle: rgba(255, 255, 255, 0.05);
@@ -48,12 +45,64 @@
   --success: #16a34a;
   --warning: #ea580c;
   --error: #dc2626;
+
+  /* Theme-specific */
+  --card-shadow: rgba(0, 0, 0, 0.3);
+  --checkbox-check: white;
+  --milestone-glow: rgba(220, 38, 38, 0.15);
+}
+
+/* Light: Warm Parchment Palette */
+.light {
+  color-scheme: light;
+  --bg-base: #f5f1e8;
+  --bg-elevated: #faf7f0;
+  --bg-surface: #ede8dc;
+  --bg-hover: #e5dfd0;
+
+  --text-primary: #1a1410;
+  --text-secondary: #3d3830;
+  --text-tertiary: #5c5548;
+  --text-muted: #827b6f;
+
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --border-standard: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.15);
+
+  --crimson: #c41e3a;
+  --crimson-deep: #8b1429;
+  --crimson-light: #dc2626;
+  --crimson-glow: rgba(196, 30, 58, 0.12);
+
+  --gold: #d97706;
+  --gold-deep: #b45309;
+  --gold-light: #f59e0b;
+
+  --ember: #c2410c;
+  --ember-deep: #9a3412;
+
+  --steel: #71717a;
+  --steel-light: #a1a1aa;
+  --steel-dark: #52525b;
+
+  --success: #15803d;
+  --warning: #c2410c;
+  --error: #c41e3a;
+
+  --card-shadow: rgba(0, 0, 0, 0.12);
+  --checkbox-check: #1a1410;
+  --milestone-glow: rgba(196, 30, 58, 0.25);
 }
 
 @theme inline {
   /* Typography */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-jetbrains);
+}
+
+/* Smooth theme transition */
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body {
@@ -166,7 +215,7 @@ button:active:not(:disabled) {
 
 .task-card-hover:hover:not(.dragging) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 16px var(--card-shadow);
 }
 
 /* Filter chip bounce animation */
@@ -230,7 +279,7 @@ input[type="checkbox"]:checked::after {
   top: 2px;
   width: 6px;
   height: 12px;
-  border: solid white;
+  border: solid var(--checkbox-check);
   border-width: 0 2.5px 2.5px 0;
   transform: rotate(45deg);
   stroke-dasharray: 16;
