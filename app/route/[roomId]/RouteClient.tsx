@@ -34,6 +34,8 @@ import RouteTaskList from './components/RouteTaskList';
 import DragOverlayContent from './components/DragOverlayContent';
 import PlayerModal from './components/PlayerModal';
 import ShareModal from './components/ShareModal';
+import LiveCursors from './components/LiveCursors';
+import { usePresence } from './hooks/usePresence';
 
 type PlayerNames = Record<string, string>;
 
@@ -99,6 +101,11 @@ export default function RouteClient({
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // ──────────────────────────────────────────────
+  // Presence (live cursors)
+  // ──────────────────────────────────────────────
+  const { others: presenceOthers, color: presenceColor, name: presenceName, setName: setPresenceName } = usePresence(room.id);
 
   // ──────────────────────────────────────────────
   // Init & localStorage
@@ -889,6 +896,7 @@ export default function RouteClient({
   // ──────────────────────────────────────────────
   return (
     <div className="h-screen bg-[var(--bg-base)] text-[var(--text-primary)] flex flex-col">
+      <LiveCursors others={presenceOthers} />
       <RouteHeader
         roomName={roomName}
         isAdmin={isAdmin}
@@ -905,6 +913,10 @@ export default function RouteClient({
         onCancelEditingName={cancelEditingName}
         onShowShareModal={() => setShowShareModal(true)}
         onOpenPlayerModal={openPlayerModal}
+        presenceOthers={presenceOthers}
+        presenceColor={presenceColor}
+        presenceName={presenceName}
+        onPresenceNameChange={setPresenceName}
       />
 
       <DndContext

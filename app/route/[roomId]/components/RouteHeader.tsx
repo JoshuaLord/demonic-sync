@@ -1,6 +1,8 @@
 'use client';
 
 import { Pencil } from 'lucide-react';
+import PresenceAvatars from './PresenceAvatars';
+import type { PresenceUser } from '../hooks/usePresence';
 
 type PlayerNames = Record<string, string>;
 
@@ -26,6 +28,10 @@ export interface RouteHeaderProps {
   onCancelEditingName: () => void;
   onShowShareModal: () => void;
   onOpenPlayerModal: () => void;
+  presenceOthers: PresenceUser[];
+  presenceColor: string;
+  presenceName: string;
+  onPresenceNameChange?: (name: string) => void;
 }
 
 export default function RouteHeader({
@@ -44,6 +50,10 @@ export default function RouteHeader({
   onCancelEditingName,
   onShowShareModal,
   onOpenPlayerModal,
+  presenceOthers,
+  presenceColor,
+  presenceName,
+  onPresenceNameChange,
 }: RouteHeaderProps) {
   return (
     <div className="border-b border-[var(--border-strong)] bg-[var(--bg-elevated)] px-6 py-4">
@@ -90,7 +100,7 @@ export default function RouteHeader({
             </div>
 
             <div className="flex items-center gap-3 text-sm font-mono font-semibold">
-              <span className="text-[var(--crimson)]">
+              <span className="text-[var(--crimson)]" suppressHydrationWarning>
                 {totalPoints.toLocaleString()}
               </span>
               <span className="text-[var(--text-tertiary)]">pts</span>
@@ -146,6 +156,15 @@ export default function RouteHeader({
             </div>
           </div>
         </div>
+        <div className="flex items-center gap-4">
+          {mounted && (
+            <PresenceAvatars
+              others={presenceOthers}
+              selfColor={presenceColor}
+              selfName={presenceName}
+              onNameChange={onPresenceNameChange}
+            />
+          )}
         <div className="flex gap-2" suppressHydrationWarning>
           {mounted && isAdmin && (
             <>
@@ -165,6 +184,7 @@ export default function RouteHeader({
               </button>
             </>
           )}
+        </div>
         </div>
       </div>
     </div>
