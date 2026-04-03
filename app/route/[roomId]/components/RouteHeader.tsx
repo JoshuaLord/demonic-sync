@@ -1,6 +1,6 @@
 'use client';
 
-import { Pencil } from 'lucide-react';
+import { Pencil, HelpCircle } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import PresenceAvatars from './PresenceAvatars';
 import type { PresenceUser } from '../hooks/usePresence';
@@ -29,6 +29,7 @@ export interface RouteHeaderProps {
   onCancelEditingName: () => void;
   onShowShareModal: () => void;
   onOpenPlayerModal: () => void;
+  onStartTour: () => void;
   presenceOthers: PresenceUser[];
   presenceColor: string;
   presenceName: string;
@@ -51,6 +52,7 @@ export default function RouteHeader({
   onCancelEditingName,
   onShowShareModal,
   onOpenPlayerModal,
+  onStartTour,
   presenceOthers,
   presenceColor,
   presenceName,
@@ -171,6 +173,7 @@ export default function RouteHeader({
             <>
               <button
                 onClick={onShowShareModal}
+                data-tour="share-button"
                 className="px-3 py-1.5 rounded-md bg-[var(--gold)] hover:bg-[var(--gold-deep)] text-white text-sm font-semibold transition-colors"
                 title="Share route"
               >
@@ -178,6 +181,7 @@ export default function RouteHeader({
               </button>
               <button
                 onClick={onOpenPlayerModal}
+                data-tour="players-button"
                 className="px-3 py-1.5 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] border border-[var(--border-standard)] text-[var(--text-primary)] text-sm font-semibold transition-colors"
                 title="Manage Players"
               >
@@ -185,7 +189,14 @@ export default function RouteHeader({
               </button>
             </>
           )}
-          <ThemeToggle />
+          <span data-tour="theme-toggle"><ThemeToggle /></span>
+          <button
+            onClick={onStartTour}
+            className="p-1.5 rounded-md hover:bg-[var(--bg-surface)] transition-colors"
+            title="Start guided tour"
+          >
+            <HelpCircle size={18} className="text-[var(--text-tertiary)]" />
+          </button>
         </div>
         </div>
       </div>

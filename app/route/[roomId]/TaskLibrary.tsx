@@ -228,7 +228,7 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
   });
 
   return (
-    <div className="h-full flex flex-col bg-[var(--bg-base)]">
+    <div className="h-full flex flex-col bg-[var(--bg-base)]" data-tour="task-library">
       {/* Header */}
       <div className="p-3 border-b border-[var(--border-standard)]">
         {/* Title + Collapse Button */}

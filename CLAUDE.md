@@ -10,7 +10,16 @@
 
 This is **Demonic Sync** - a collaborative OSRS Leagues 6 (Demonic Pacts League) route planning tool. We're building it incrementally using a "crawl, walk, run" approach.
 
-**Current Status:** 🚀 **DEPLOYED TO PRODUCTION** - Stage 3 Complete, Phase 10 (Post-Launch)
+**Current Status:** 🚀 **DEPLOYED TO PRODUCTION** - Stage 3 Complete + Post-Launch Enhancements
+
+**Latest Updates (April 3, 2026):**
+- ✅ Light/Dark theme toggle with ThemeProvider
+- ✅ Custom presence names with real-time sync
+- ✅ Live cursors showing other users
+- ✅ Milestone selection popover (relics & regions)
+- ✅ Guided tour with driver.js
+- ✅ E2E testing with Playwright + Unit tests with Vitest
+- ✅ Component refactoring for better maintainability
 
 ## Important Technical Notes
 
@@ -44,14 +53,26 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
 ## Key Files
 
-- `PROJECT-STATUS.md` - **Most important:** Full current state and next steps
+- `PROJECT-STATUS.md` - Full current state and next steps (needs updating)
 - `app/page.tsx` - Landing page with room creation
 - `app/route/[roomId]/page.tsx` - Route page (server component)
-- `app/route/[roomId]/RouteClient.tsx` - Route interactivity (client component)
-- `app/api/rooms/create/route.ts` - Room creation API
+- `app/route/[roomId]/RouteClient.tsx` - Main route logic (client component)
+- `app/route/[roomId]/components/` - Component directory:
+  - `RouteHeader.tsx` - Header with stats, players, share, theme toggle
+  - `RouteTaskList.tsx` - Task list with drag-drop sorting
+  - `SortableTaskItem.tsx` - Individual draggable task item
+  - `MilestoneRow.tsx` - Milestone display with relic/region selection
+  - `PlayerModal.tsx`, `ShareModal.tsx` - Modal dialogs
+  - `PresenceAvatars.tsx`, `LiveCursors.tsx` - Real-time presence UI
+- `app/route/[roomId]/hooks/usePresence.ts` - Custom hook for presence tracking
+- `components/ThemeToggle.tsx`, `ThemeProvider.tsx` - Theme system
 - `lib/supabase.ts` - Supabase client
+- `lib/milestones.ts` - Milestone calculation logic
+- `lib/tour.ts` - Guided tour implementation
 - `types/database.types.ts` - Auto-generated DB types
 - `supabase/migrations/` - Database migrations
+- `e2e/` - Playwright E2E tests
+- `vitest.config.ts`, `playwright.config.ts` - Test configurations
 
 ## Reference Documents
 
@@ -74,21 +95,44 @@ Located in parent directory: `/Users/illumin/Documents/leagues-planner/`
 
 **🚀 PRODUCTION DEPLOYMENT:**
 - Deployed to Vercel + Supabase Production
-- Deployment Date: March 28, 2026
+- Initial Deployment: March 28, 2026
+- Latest Updates: April 3, 2026 (theme toggle, presence, testing)
+- Production URL: https://demonic-sync-[hash].vercel.app
 - Vercel CLI available: `vercel`
 - Supabase CLI available: `supabase`
+- **Note:** Uncommitted changes exist (tests, tour, latest migration)
 
-**✅ STAGE 3 COMPLETE (All Features Live):**
+**✅ STAGE 3 COMPLETE (All Core Features Live):**
 1. ✅ Real-time sync - Supabase Realtime subscriptions, instant updates
 2. ✅ Multiple player columns - Up to 6 players, checkboxes, share modal
 3. ✅ Official tasks database - 1,589 tasks, search/filter, split-pane, collapsible
 4. ✅ Drag-and-drop reordering - @dnd-kit, drag from library, reorder in route, running totals
 5. ✅ Milestone auto-injection - Relic tiers (8), Area unlocks (3), auto-calculation, checkboxes
 
-**📋 CURRENT PHASE: Phase 10 (Post-Launch)**
-- Monitor user feedback and fix bugs
-- Performance optimization as needed
-- Future enhancements (optional V2 features)
+**✅ POST-LAUNCH ENHANCEMENTS (April 2026):**
+- **Theme System:** Light/Dark mode toggle with CSS variables and localStorage persistence
+- **Live Presence:** Real-time user cursors and avatars with custom names
+  - Persistent identity (color + name stored in localStorage)
+  - Live cursor tracking with Supabase Realtime broadcasts
+  - Editable presence names that sync instantly across clients
+- **Milestone Selection:** Popover UI for selecting relics and regions
+  - `official_relics` table with Tier 1-8 relics (T1 populated, T2-8 placeholders)
+  - `official_regions` table with 8 unlockable regions
+  - Selections stored in `milestone_selections` JSONB column
+- **Component Architecture:** RouteClient refactored into dedicated components
+  - `RouteHeader`, `RouteTaskList`, `SortableTaskItem`, `MilestoneRow`
+  - `PlayerModal`, `ShareModal`, `PresenceAvatars`, `LiveCursors`
+  - `DragOverlayContent` for unified drag preview
+- **Guided Tour:** Interactive product tour using driver.js
+  - First-time user onboarding
+  - Highlights key features (route, library, drag-drop, players, share, theme)
+- **Testing Infrastructure:**
+  - Playwright E2E tests: drag-and-drop, multi-user, edge cases
+  - Vitest unit tests for milestones logic
+  - Test coverage for core functionality
+- **Database Improvements:**
+  - REPLICA IDENTITY FULL for realtime delete events
+  - Prevents silent drop of DELETE events in filtered subscriptions
 
 ## User Preferences
 

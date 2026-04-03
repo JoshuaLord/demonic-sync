@@ -2,7 +2,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { Room, RouteStep, OfficialRelic, OfficialRegion, MilestoneSelections } from '@/types';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { GripVertical, GripHorizontal, ChevronLeft, ChevronUp } from 'lucide-react';
 import TaskLibrary from './TaskLibrary';
 import {
@@ -28,6 +28,9 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { snapCenterToCursor } from '@dnd-kit/modifiers';
+
+import { startTour, hasSeenTour } from '@/lib/tour';
+import 'driver.js/dist/driver.css';
 
 import RouteHeader from './components/RouteHeader';
 import RouteTaskList from './components/RouteTaskList';
@@ -80,6 +83,8 @@ export default function RouteClient({
   const [libraryWidth, setLibraryWidth] = useState(350);
   const [libraryHeight, setLibraryHeight] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
+
+  const tourTriggered = useRef(false);
 
   // DnD state - inline preview injection
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -137,6 +142,22 @@ export default function RouteClient({
 
     setMounted(true);
   }, [room.id]);
+
+  // ──────────────────────────────────────────────
+  // Guided tour auto-trigger
+  // ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!mounted || tourTriggered.current) return;
+    if (steps.length === 0 && !hasSeenTour()) {
+      tourTriggered.current = true;
+      const timer = setTimeout(() => startTour(), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [mounted, steps.length]);
+
+  const handleStartTour = useCallback(() => {
+    startTour();
+  }, []);
 
   // ──────────────────────────────────────────────
   // Real-time subscriptions
@@ -917,6 +938,7 @@ export default function RouteClient({
         presenceColor={presenceColor}
         presenceName={presenceName}
         onPresenceNameChange={setPresenceName}
+        onStartTour={handleStartTour}
       />
 
       <DndContext
@@ -930,7 +952,7 @@ export default function RouteClient({
       >
         <div className={`flex-1 ${libraryPosition === 'sidebar' ? 'flex' : 'flex flex-col'} overflow-hidden`}>
           {/* Route Pane */}
-          <div className={`flex-1 flex flex-col overflow-hidden ${libraryPosition === 'sidebar' ? 'border-r' : 'border-b'} border-[var(--border-standard)]`}>
+          <div data-tour="drag-drop-zone" className={`flex-1 flex flex-col overflow-hidden ${libraryPosition === 'sidebar' ? 'border-r' : 'border-b'} border-[var(--border-standard)]`}>
             <div className={`flex-1 p-4 overflow-y-auto ${steps.length === 0 && !previewStep ? 'flex items-center justify-center' : ''}`}>
               <RouteTaskList
                 steps={stepsWithPreview}

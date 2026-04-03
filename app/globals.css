@@ -296,3 +296,84 @@ input[type="checkbox"]:disabled:hover {
   transform: none;
   border-color: var(--border-strong);
 }
+
+/* ============================================
+   DRIVER.JS TOUR OVERRIDES
+   ============================================ */
+
+.driver-popover.demonic-tour-popover {
+  background: var(--bg-elevated) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4) !important;
+  padding: 20px !important;
+}
+
+.driver-popover.demonic-tour-popover .driver-popover-title {
+  color: var(--gold) !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  margin-bottom: 6px !important;
+}
+
+.driver-popover.demonic-tour-popover .driver-popover-description {
+  color: var(--text-secondary) !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+}
+
+.driver-popover.demonic-tour-popover .driver-popover-progress-text {
+  color: var(--text-muted) !important;
+  font-size: 0.75rem !important;
+}
+
+.driver-popover.demonic-tour-popover .driver-popover-navigation-btns {
+  gap: 8px !important;
+}
+
+.driver-popover.demonic-tour-popover .driver-popover-prev-btn {
+  background: var(--bg-surface) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border-standard) !important;
+  border-radius: 6px !important;
+  padding: 6px 14px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+}
+
+.driver-popover.demonic-tour-popover .driver-popover-prev-btn:hover {
+  background: var(--bg-hover) !important;
+}
+
+.driver-popover.demonic-tour-popover .driver-popover-next-btn,
+.driver-popover.demonic-tour-popover .driver-popover-close-btn-text {
+  background: var(--gold) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 6px 14px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
+}
+
+.driver-popover.demonic-tour-popover .driver-popover-next-btn:hover,
+.driver-popover.demonic-tour-popover .driver-popover-close-btn-text:hover {
+  background: var(--gold-deep) !important;
+}
+
+.driver-popover.demonic-tour-popover .driver-popover-arrow-side-left,
+.driver-popover.demonic-tour-popover .driver-popover-arrow-side-right,
+.driver-popover.demonic-tour-popover .driver-popover-arrow-side-top,
+.driver-popover.demonic-tour-popover .driver-popover-arrow-side-bottom {
+  border-color: var(--bg-elevated) !important;
+}
+
+.driver-popover.demonic-tour-popover .driver-popover-close-btn {
+  color: var(--text-tertiary) !important;
+}
+
+.driver-popover.demonic-tour-popover .driver-popover-close-btn:hover {
+  color: var(--text-primary) !important;
+}

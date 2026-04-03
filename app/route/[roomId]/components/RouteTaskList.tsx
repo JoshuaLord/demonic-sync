@@ -67,7 +67,7 @@ export default function RouteTaskList({
   const realSteps = previewStepId ? steps.filter(s => s.id !== previewStepId) : steps;
 
   return (
-    <div className="flex flex-col gap-2" suppressHydrationWarning>
+    <div className="flex flex-col gap-2" data-tour="route-area" suppressHydrationWarning>
       {/* Column Headers */}
       {playerIds.length > 0 && steps.length > 0 && (
         <div className="flex gap-2 items-center mb-3 pb-2 border-b border-[var(--border-subtle)]" suppressHydrationWarning>
