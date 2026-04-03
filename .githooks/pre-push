@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Pre-push hook to check migration safety
+# This prevents pushing potentially destructive migrations to the repository
+
+echo "🔍 Running pre-push safety checks..."
+
+# Check if there are new migration files being pushed
+MIGRATIONS_CHANGED=$(git diff --name-only origin/main...HEAD | grep "supabase/migrations/.*\.sql" || true)
+
+if [ -n "$MIGRATIONS_CHANGED" ]; then
+  echo ""
+  echo "📝 New migration files detected:"
+  echo "$MIGRATIONS_CHANGED" | while read -r file; do
+    echo "   - $file"
+  done
+  echo ""
+
+  # Run migration safety checker
+  echo "🔒 Running migration safety checks..."
+  if ! node scripts/check-migration-safety.js; then
+    echo ""
+    echo "❌ Pre-push hook FAILED!"
+    echo "   Destructive migrations detected."
+    echo ""
+    echo "Options:"
+    echo "  1. Fix the migration to be non-destructive"
+    echo "  2. Skip this check with: git push --no-verify (NOT RECOMMENDED)"
+    echo ""
+    exit 1
+  fi
+fi
+
+echo "✅ Pre-push checks passed!"
+echo ""

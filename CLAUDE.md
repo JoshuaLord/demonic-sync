@@ -53,7 +53,13 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
 ## Key Files
 
+### Documentation
+- `CLAUDE.md` - This file (project instructions)
 - `PROJECT-STATUS.md` - Full current state and next steps (needs updating)
+- `DATABASE-SAFETY.md` - **CRITICAL:** Database safety guide and best practices
+- `.env.example` - Environment variables template
+
+### Application Code
 - `app/page.tsx` - Landing page with room creation
 - `app/route/[roomId]/page.tsx` - Route page (server component)
 - `app/route/[roomId]/RouteClient.tsx` - Main route logic (client component)
@@ -69,10 +75,23 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 - `lib/supabase.ts` - Supabase client
 - `lib/milestones.ts` - Milestone calculation logic
 - `lib/tour.ts` - Guided tour implementation
-- `types/database.types.ts` - Auto-generated DB types
-- `supabase/migrations/` - Database migrations
-- `e2e/` - Playwright E2E tests
+
+### Database & Safety
+- `supabase/migrations/` - Database migrations (12 total)
+- `scripts/check-migration-safety.js` - Detects destructive SQL operations
+- `scripts/db-push-safe.sh` - Safe production migration push with confirmations
+- `scripts/setup-hooks.sh` - Installs git hooks for safety
+- `.githooks/pre-push` - Pre-push hook to check migrations
+
+### Testing
+- `e2e/` - Playwright E2E tests (3 suites)
+- `lib/milestones.test.ts` - Vitest unit tests
 - `vitest.config.ts`, `playwright.config.ts` - Test configurations
+
+### Build & Types
+- `types/database.types.ts` - Auto-generated DB types from Supabase
+- `types/index.ts` - Custom TypeScript types
+- `package.json` - Dependencies and npm scripts (includes safety commands)
 
 ## Reference Documents
 
@@ -154,15 +173,37 @@ npm run dev
 ```bash
 supabase migration new <name>
 # Edit migration file
-supabase db reset
+supabase db reset  # SAFE: Only affects local Docker DB
 supabase gen types typescript --local > types/database.types.ts
 ```
 
 **Deploy to production:**
 ```bash
-vercel --prod                    # Deploy frontend
-supabase db push                 # Push database migrations
+# Frontend deployment
+vercel --prod
+
+# Database migrations (WITH SAFETY CHECKS)
+npm run db:push:safe  # Recommended - includes safety checks & confirmations
+# OR manually:
+npm run db:check      # Check for destructive operations
+supabase db push      # Push migrations (no safety checks)
 ```
+
+## 🔒 Database Safety (IMPORTANT!)
+
+**⛔ NEVER DO THIS:**
+- `supabase db reset` on production (wipes all data!)
+- Push migrations without testing locally first
+- Use `DROP TABLE` or `TRUNCATE` without explicit plan
+
+**✅ SAFE WORKFLOW:**
+1. Create migration: `supabase migration new name`
+2. Test locally: `supabase db reset` (local only!)
+3. Check safety: `npm run db:check`
+4. Commit migration: `git add supabase/migrations/ && git commit`
+5. Push to production: `npm run db:push:safe`
+
+**See [DATABASE-SAFETY.md](./DATABASE-SAFETY.md) for complete safety guide**
 
 **View database:**
 - Local: http://localhost:54323

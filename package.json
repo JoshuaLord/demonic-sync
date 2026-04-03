@@ -11,7 +11,12 @@
     "test:watch": "vitest",
     "import-tasks": "tsx scripts/import-tasks.ts",
     "test:e2e": "npx playwright test",
-    "test:e2e:headed": "npx playwright test --headed"
+    "test:e2e:headed": "npx playwright test --headed",
+    "db:push": "echo '⚠️  Use npm run db:push:safe instead!' && exit 1",
+    "db:push:safe": "bash scripts/db-push-safe.sh",
+    "db:reset": "echo '🛑 BLOCKED: db:reset is disabled to prevent data loss!' && echo '   For local development: supabase db reset' && echo '   For production: Use npm run db:push:safe' && exit 1",
+    "db:check": "node scripts/check-migration-safety.js",
+    "db:backup": "echo '💾 Reminder: Ensure you have recent backups before migrations' && supabase db dump --linked > backup-$(date +%Y%m%d-%H%M%S).sql"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
