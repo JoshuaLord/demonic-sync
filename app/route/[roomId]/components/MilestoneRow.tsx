@@ -3,7 +3,7 @@
 import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import { Milestone } from '@/lib/milestones';
-import { OfficialRelic, MilestoneSelections } from '@/types';
+import { OfficialRelic, OfficialRegion, MilestoneSelections } from '@/types';
 
 export interface MilestoneRowProps {
   milestone: Milestone;
