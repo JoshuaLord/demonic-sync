@@ -1,9 +1,9 @@
 'use client';
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react';
-import { Check } from 'lucide-react';
+import { memo, useState, useCallback } from 'react';
 import { Milestone } from '@/lib/milestones';
 import { OfficialRelic, OfficialRegion, MilestoneSelections } from '@/types';
+import RelicSelectionModal from './RelicSelectionModal';
 
 export interface MilestoneRowProps {
   milestone: Milestone;
@@ -19,6 +19,8 @@ export interface MilestoneRowProps {
   onMilestoneSelection: (milestoneId: string, selectedId: number | null) => void;
 }
 
+const RELOADED_RELIC_ID = 19; // ID of the Reloaded relic (Tier 7)
+
 const MilestoneRow = memo(function MilestoneRow({
   milestone,
   playerIds,
@@ -32,9 +34,8 @@ const MilestoneRow = memo(function MilestoneRow({
   onMilestoneSelection
 }: MilestoneRowProps) {
   const [bouncingCheckbox, setBouncingCheckbox] = useState<string | null>(null);
-  const [popoverOpen, setPopoverOpen] = useState(false);
-  const popoverRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [reloadedModalOpen, setReloadedModalOpen] = useState(false);
 
   const handleCheckboxToggle = useCallback((milestoneId: string, playerId: string) => {
     const checkboxKey = `${milestoneId}-${playerId}`;
@@ -42,21 +43,6 @@ const MilestoneRow = memo(function MilestoneRow({
     onToggleMilestoneCheckbox(milestoneId, playerId);
     setTimeout(() => setBouncingCheckbox(null), 400);
   }, [onToggleMilestoneCheckbox]);
-
-  // Close popover on outside click
-  useEffect(() => {
-    if (!popoverOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (
-        popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
-        buttonRef.current && !buttonRef.current.contains(e.target as Node)
-      ) {
-        setPopoverOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [popoverOpen]);
 
   const isRelic = milestone.type === 'relic';
   const thresholdText = isRelic
@@ -73,6 +59,30 @@ const MilestoneRow = memo(function MilestoneRow({
     : null;
 
   const placeholder = isRelic ? 'Select Relic...' : 'Select Region...';
+
+  // Reloaded relic special logic: Check if this is Tier 7 and Reloaded is selected
+  const isReloadedSelected = milestone.tier === 7 && selectedId === RELOADED_RELIC_ID;
+  const reloadedSelectionId = milestoneSelections['relic_reloaded'] || null;
+
+  // Get available relics for Reloaded selection (T1-T6, excluding already selected ones)
+  const getReloadedOptions = (): OfficialRelic[] => {
+    if (!isReloadedSelected) return [];
+
+    // Get all T1-T6 relics
+    const availableRelics = relics.filter(r => r.tier >= 1 && r.tier <= 6);
+
+    // Exclude relics already selected in their respective tiers
+    const selectedRelicIds = Object.entries(milestoneSelections)
+      .filter(([key]) => key.startsWith('relic_t'))
+      .map(([_, value]) => value);
+
+    return availableRelics.filter(r => !selectedRelicIds.includes(r.id));
+  };
+
+  const reloadedOptions = getReloadedOptions();
+  const reloadedSelectedItem = reloadedSelectionId
+    ? reloadedOptions.find(r => r.id === reloadedSelectionId)
+    : null;
 
   return (
     <div className="bg-gradient-to-r from-[var(--milestone-glow)] to-transparent border-l-2 border-[var(--crimson)] rounded-md p-1.5 flex gap-2 items-center transition-all duration-200 hover:shadow-lg hover:shadow-[var(--crimson)]/30 hover:-translate-y-1">
@@ -97,10 +107,9 @@ const MilestoneRow = memo(function MilestoneRow({
           ({thresholdText})
         </span>
 
-        <div className="ml-auto relative">
+        <div className="ml-auto flex items-center gap-2">
           <button
-            ref={buttonRef}
-            onClick={() => setPopoverOpen(!popoverOpen)}
+            onClick={() => setModalOpen(true)}
             disabled={!isAdmin}
             className="flex items-center gap-1.5 bg-[var(--bg-surface)] border border-[var(--border-standard)] rounded-md px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:border-[var(--gold)] focus:outline-none focus:border-[var(--gold)]"
           >
@@ -109,38 +118,40 @@ const MilestoneRow = memo(function MilestoneRow({
             </span>
           </button>
 
-          {popoverOpen && (
-            <div
-              ref={popoverRef}
-              className="absolute top-full left-0 mt-1 min-w-[220px] max-h-[280px] overflow-y-auto bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg shadow-xl z-50"
-            >
-              {options.map((opt) => {
-                const isSelected = opt.id === selectedId;
-                const relic = isRelic ? (opt as OfficialRelic) : null;
-                return (
-                  <button
-                    key={opt.id}
-                    onClick={() => {
-                      onMilestoneSelection(milestone.id, isSelected ? null : opt.id);
-                      setPopoverOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors hover:bg-[var(--bg-hover)] ${
-                      isSelected ? 'text-[var(--gold)] font-bold' : 'text-[var(--text-primary)]'
-                    }`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold">{opt.name}</div>
-                      {relic?.description && (
-                        <div className="text-[var(--text-tertiary)] text-[10px] mt-0.5 leading-tight">
-                          {relic.description}
-                        </div>
-                      )}
-                    </div>
-                    {isSelected && <Check size={14} className="flex-shrink-0 text-[var(--gold)]" />}
-                  </button>
-                );
-              })}
-            </div>
+          <RelicSelectionModal
+            isOpen={modalOpen}
+            onClose={() => setModalOpen(false)}
+            options={options}
+            selectedId={selectedId}
+            onSelect={(id) => onMilestoneSelection(milestone.id, id)}
+            isRelic={isRelic}
+            title={isRelic ? `Select Relic - ${milestone.label}` : `Select Region - ${milestone.label}`}
+          />
+
+          {/* Reloaded bonus selection */}
+          {isReloadedSelected && (
+            <>
+              <span className="text-xs text-[var(--text-tertiary)] font-bold">+</span>
+              <button
+                onClick={() => setReloadedModalOpen(true)}
+                disabled={!isAdmin}
+                className="flex items-center gap-1.5 bg-[var(--bg-surface)] border-2 border-dashed border-[var(--gold)]/50 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:border-[var(--gold)] focus:outline-none focus:border-[var(--gold)]"
+              >
+                <span className={reloadedSelectedItem ? 'text-[var(--gold)]' : 'text-[var(--text-tertiary)]'}>
+                  {reloadedSelectedItem ? reloadedSelectedItem.name : 'Bonus Relic...'}
+                </span>
+              </button>
+
+              <RelicSelectionModal
+                isOpen={reloadedModalOpen}
+                onClose={() => setReloadedModalOpen(false)}
+                options={reloadedOptions}
+                selectedId={reloadedSelectionId}
+                onSelect={(id) => onMilestoneSelection('relic_reloaded', id)}
+                isRelic={true}
+                title="Reloaded Bonus - Select from Previous Tiers"
+              />
+            </>
           )}
         </div>
       </div>
