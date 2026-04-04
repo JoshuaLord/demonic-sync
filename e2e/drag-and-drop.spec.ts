@@ -1,65 +1,13 @@
 import { test, expect, Page } from '@playwright/test';
-
-// Helper: Suppress the guided tour so it doesn't block interactions
-async function suppressTour(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.setItem('demonic-sync-tour-seen', 'true');
-  });
-}
-
-// Helper: Create a new room and navigate to it as admin
-async function createRoom(page: Page): Promise<string> {
-  await suppressTour(page);
-  await page.goto('/');
-
-  // Click the create room button
-  const createButton = page.locator('button', { hasText: /create/i });
-  await createButton.click();
-
-  // Wait for navigation to the route page
-  await page.waitForURL(/\/route\//, { timeout: 10000 });
-
-  const url = page.url();
-  const roomId = url.match(/\/route\/([^?]+)/)?.[1] || '';
-  expect(roomId).toBeTruthy();
-
-  // Wait for the page to fully load and ensure task library tab is visible
-  await page.waitForSelector('[data-tour="task-library"]', { timeout: 10000 });
-
-  // Ensure sidebar is expanded and on Library tab (not Unlocks)
-  // The sidebar should be expanded by default, but let's verify the library content is visible
-  await page.waitForSelector('[data-tour="task-library"] input[placeholder*="Search"]', { timeout: 10000 });
-
-  return roomId;
-}
-
-// Helper: Get task names in the route (in order)
-async function getRouteTaskNames(page: Page): Promise<string[]> {
-  const routeArea = page.locator('[data-tour="route-area"]');
-  const nameElements = routeArea.locator('.font-medium.truncate');
-  const names: string[] = [];
-  const count = await nameElements.count();
-  for (let i = 0; i < count; i++) {
-    const text = await nameElements.nth(i).textContent();
-    if (text) names.push(text.trim());
-  }
-  return names;
-}
-
-// Helper: Add N tasks via the + button
-async function addTasksViaButton(page: Page, count: number): Promise<string[]> {
-  const taskNames: string[] = [];
-  for (let i = 0; i < count; i++) {
-    const taskNameEl = page.locator('[data-tour="task-library"] .font-semibold.text-sm').first();
-    const name = await taskNameEl.textContent();
-    taskNames.push(name?.trim() || '');
-
-    const addButton = page.locator('[data-tour="task-library"] button[title="Add to route"]').first();
-    await addButton.click();
-    await page.waitForTimeout(1000);
-  }
-  return taskNames;
-}
+import {
+  suppressTour,
+  createRoom,
+  getRouteTaskNames,
+  waitForTaskCount,
+  addTasksViaButton,
+  getVisibleRouteItem,
+  waitForEmptyState,
+} from './helpers';
 
 test.describe('Room Creation & Setup', () => {
   test('can create a new room and land on route page', async ({ page }) => {
@@ -84,19 +32,20 @@ test.describe('Adding Tasks to Route', () => {
     const addButton = page.locator('[data-tour="task-library"] button[title="Add to route"]').first();
     await addButton.click();
 
-    // Wait for the task to appear in the route
-    await page.waitForTimeout(1000);
+    // Wait for the task to actually appear (not a fixed timeout!)
+    await waitForTaskCount(page, 1);
 
     // The empty state should be gone
-    await expect(page.locator('text=Drag tasks here to build your route')).not.toBeVisible();
+    await waitForEmptyState(page, false);
   });
 
   test('can add multiple tasks and they appear in order', async ({ page }) => {
     await createRoom(page);
-    await page.waitForSelector('[data-tour="task-library"] button[title="Add to route"]', { timeout: 10000 });
 
+    // Add 3 tasks and wait for each to appear
     await addTasksViaButton(page, 3);
 
+    // Verify we have exactly 3 tasks
     const names = await getRouteTaskNames(page);
     expect(names.length).toBe(3);
   });
@@ -146,12 +95,11 @@ test.describe('Drag and Drop - Library to Route', () => {
 test.describe('Drag and Drop - Reorder within Route', () => {
   test('can reorder tasks by dragging within the route', async ({ page }) => {
     await createRoom(page);
-    await page.waitForSelector('[data-tour="task-library"] button[title="Add to route"]', { timeout: 10000 });
 
-    // Add 3 tasks via + button
+    // Add 3 tasks via + button (each waits for task to appear)
     await addTasksViaButton(page, 3);
 
-    // Verify we have 3 tasks
+    // Get the initial order
     const initialNames = await getRouteTaskNames(page);
     expect(initialNames.length).toBe(3);
 
@@ -200,16 +148,12 @@ test.describe('Drag and Drop - Reorder within Route', () => {
 test.describe('Task Deletion', () => {
   test('can delete a task with double-click confirm', async ({ page }) => {
     await createRoom(page);
-    await page.waitForSelector('[data-tour="task-library"] button[title="Add to route"]', { timeout: 10000 });
 
-    // Add a task
+    // Add a task (waits for it to appear)
     await addTasksViaButton(page, 1);
 
-    // Hover over the task to reveal delete button
-    const routeArea = page.locator('[data-tour="route-area"]');
-    const taskItem = routeArea.locator('[data-testid="route-task-item"]').first();
-    await taskItem.scrollIntoViewIfNeeded();
-    await taskItem.waitFor({ state: 'visible', timeout: 5000 });
+    // Get the visible task item
+    const taskItem = await getVisibleRouteItem(page, 0);
     await taskItem.hover();
 
     // Click delete button once (first click = confirm prompt)
@@ -220,10 +164,11 @@ test.describe('Task Deletion', () => {
     const confirmButton = taskItem.locator('button[title="Click again to confirm"]');
     await confirmButton.click();
 
-    await page.waitForTimeout(1000);
+    // Wait for the task to be deleted
+    await waitForTaskCount(page, 0);
 
     // Route should be empty again
-    await expect(page.locator('text=Drag tasks here to build your route')).toBeVisible();
+    await waitForEmptyState(page, true);
   });
 });
 
@@ -244,7 +189,7 @@ test.describe('View-Only Mode', () => {
     // Use a brand new browser context to simulate a different user
     const viewerContext = await page.context().browser()!.newContext();
     const viewerPage = await viewerContext.newPage();
-    await suppressTourForPage(viewerPage);
+    await suppressTour(viewerPage);
 
     // Visit the room without the admin key
     await viewerPage.goto(`http://localhost:3000/route/${roomId}`);
@@ -267,10 +212,3 @@ test.describe('View-Only Mode', () => {
     await viewerContext.close();
   });
 });
-
-// Helper for pages created outside the createRoom flow
-async function suppressTourForPage(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.setItem('demonic-sync-tour-seen', 'true');
-  });
-}

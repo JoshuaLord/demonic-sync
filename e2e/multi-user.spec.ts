@@ -1,13 +1,13 @@
 import { test, expect, Page, Browser, BrowserContext } from '@playwright/test';
+import {
+  suppressTour,
+  getRouteTaskNames,
+  waitForTaskCount,
+  getVisibleRouteItem,
+  waitForEmptyState,
+} from './helpers';
 
 const BASE_URL = 'http://localhost:3000';
-
-// Helper: Suppress the guided tour
-async function suppressTour(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.setItem('demonic-sync-tour-seen', 'true');
-  });
-}
 
 // Helper: Create a fresh browser context with tour suppressed
 async function createUser(browser: Browser): Promise<{ context: BrowserContext; page: Page }> {
@@ -18,7 +18,7 @@ async function createUser(browser: Browser): Promise<{ context: BrowserContext; 
 }
 
 // Helper: Create a room as admin and return roomId + adminKey
-async function createRoom(page: Page): Promise<{ roomId: string; adminKey: string }> {
+async function createRoomMultiUser(page: Page): Promise<{ roomId: string; adminKey: string }> {
   await page.goto(BASE_URL);
   const createButton = page.locator('button', { hasText: /create/i });
   await createButton.click();
@@ -30,50 +30,18 @@ async function createRoom(page: Page): Promise<{ roomId: string; adminKey: strin
   const adminKey = url.match(/[?&]key=([^&]+)/)?.[1] || '';
 
   await page.waitForSelector('[data-tour="task-library"]', { timeout: 10000 });
+
+  // Give realtime subscription time to fully initialize
+  await page.waitForTimeout(1000);
+
   return { roomId, adminKey };
-}
-
-// Helper: Get task names from route area
-async function getRouteTaskNames(page: Page): Promise<string[]> {
-  const routeArea = page.locator('[data-tour="route-area"]');
-  const nameElements = routeArea.locator('.font-medium.truncate');
-  const names: string[] = [];
-  const count = await nameElements.count();
-  for (let i = 0; i < count; i++) {
-    const text = await nameElements.nth(i).textContent();
-    if (text) names.push(text.trim());
-  }
-  return names;
-}
-
-// Helper: Wait for a specific task count in the route
-async function waitForTaskCount(page: Page, count: number, timeout = 8000) {
-  const deadline = Date.now() + timeout;
-  while (Date.now() < deadline) {
-    const names = await getRouteTaskNames(page);
-    if (names.length === count) return names;
-    await page.waitForTimeout(300);
-  }
-  // Final check with assertion
-  const names = await getRouteTaskNames(page);
-  expect(names.length, `Expected ${count} tasks but found ${names.length}`).toBe(count);
-  return names;
-}
-
-// Helper: Get a route task item and ensure it's visible
-async function getVisibleRouteItem(page: Page, index = 0) {
-  const routeArea = page.locator('[data-tour="route-area"]');
-  const taskItem = routeArea.locator('[data-testid="route-task-item"]').nth(index);
-  await taskItem.scrollIntoViewIfNeeded();
-  await taskItem.waitFor({ state: 'visible', timeout: 5000 });
-  return taskItem;
 }
 
 test.describe('Multi-User: Real-time task sync', () => {
   test('viewer sees task added by admin in real-time', async ({ browser }) => {
     // Admin creates a room
     const admin = await createUser(browser);
-    const { roomId } = await createRoom(admin.page);
+    const { roomId } = await createRoomMultiUser(admin.page);
 
     // Viewer joins the same room (no admin key)
     const viewer = await createUser(browser);
@@ -108,7 +76,7 @@ test.describe('Multi-User: Real-time task sync', () => {
 
   test('viewer sees task deleted by admin in real-time', async ({ browser }) => {
     const admin = await createUser(browser);
-    const { roomId } = await createRoom(admin.page);
+    const { roomId } = await createRoomMultiUser(admin.page);
 
     // Admin adds a task first
     await admin.page.waitForSelector('[data-tour="task-library"] button[title="Add to route"]', { timeout: 10000 });
@@ -144,7 +112,7 @@ test.describe('Multi-User: Two admins editing simultaneously', () => {
   test('both admins see tasks added by the other', async ({ browser }) => {
     // Admin 1 creates a room
     const admin1 = await createUser(browser);
-    const { roomId, adminKey } = await createRoom(admin1.page);
+    const { roomId, adminKey } = await createRoomMultiUser(admin1.page);
 
     // Admin 2 joins with the admin key
     const admin2 = await createUser(browser);
@@ -178,15 +146,15 @@ test.describe('Multi-User: Two admins editing simultaneously', () => {
 
   test('reorder by one admin is reflected for the other', async ({ browser }) => {
     const admin1 = await createUser(browser);
-    const { roomId, adminKey } = await createRoom(admin1.page);
+    const { roomId, adminKey } = await createRoomMultiUser(admin1.page);
 
-    // Add 3 tasks as admin 1
+    // Add 3 tasks as admin 1, waiting for each to appear
     await admin1.page.waitForSelector('[data-tour="task-library"] button[title="Add to route"]', { timeout: 10000 });
     for (let i = 0; i < 3; i++) {
+      const beforeCount = (await getRouteTaskNames(admin1.page)).length;
       await admin1.page.locator('[data-tour="task-library"] button[title="Add to route"]').first().click();
-      await admin1.page.waitForTimeout(1000);
+      await waitForTaskCount(admin1.page, beforeCount + 1);
     }
-    await waitForTaskCount(admin1.page, 3);
 
     // Admin 2 joins
     const admin2 = await createUser(browser);
@@ -244,7 +212,7 @@ test.describe('Multi-User: Two admins editing simultaneously', () => {
 test.describe('Multi-User: Checkbox sync', () => {
   test('checkbox toggled by admin appears for viewer', async ({ browser }) => {
     const admin = await createUser(browser);
-    const { roomId } = await createRoom(admin.page);
+    const { roomId } = await createRoomMultiUser(admin.page);
 
     // Add a task
     await admin.page.waitForSelector('[data-tour="task-library"] button[title="Add to route"]', { timeout: 10000 });
@@ -284,7 +252,7 @@ test.describe('Multi-User: Checkbox sync', () => {
 test.describe('Multi-User: Simultaneous actions', () => {
   test('two admins adding tasks at the same time', async ({ browser }) => {
     const admin1 = await createUser(browser);
-    const { roomId, adminKey } = await createRoom(admin1.page);
+    const { roomId, adminKey } = await createRoomMultiUser(admin1.page);
 
     const admin2 = await createUser(browser);
     await admin2.page.goto(`${BASE_URL}/route/${roomId}?key=${adminKey}`);
@@ -317,15 +285,15 @@ test.describe('Multi-User: Simultaneous actions', () => {
 
   test('one admin adds while another deletes - no crash', async ({ browser }) => {
     const admin1 = await createUser(browser);
-    const { roomId, adminKey } = await createRoom(admin1.page);
+    const { roomId, adminKey } = await createRoomMultiUser(admin1.page);
 
-    // Admin1 adds 2 tasks
+    // Admin1 adds 2 tasks, waiting for each to appear
     await admin1.page.waitForSelector('[data-tour="task-library"] button[title="Add to route"]', { timeout: 10000 });
     for (let i = 0; i < 2; i++) {
+      const beforeCount = (await getRouteTaskNames(admin1.page)).length;
       await admin1.page.locator('[data-tour="task-library"] button[title="Add to route"]').first().click();
-      await admin1.page.waitForTimeout(1000);
+      await waitForTaskCount(admin1.page, beforeCount + 1);
     }
-    await waitForTaskCount(admin1.page, 2);
 
     // Admin2 joins
     const admin2 = await createUser(browser);
@@ -370,15 +338,15 @@ test.describe('Multi-User: Simultaneous actions', () => {
 test.describe('Multi-User: Late joiner', () => {
   test('user joining after tasks are added sees full state', async ({ browser }) => {
     const admin = await createUser(browser);
-    const { roomId } = await createRoom(admin.page);
+    const { roomId } = await createRoomMultiUser(admin.page);
 
-    // Admin adds 4 tasks
+    // Admin adds 4 tasks, waiting for each to appear
     await admin.page.waitForSelector('[data-tour="task-library"] button[title="Add to route"]', { timeout: 10000 });
     for (let i = 0; i < 4; i++) {
+      const beforeCount = (await getRouteTaskNames(admin.page)).length;
       await admin.page.locator('[data-tour="task-library"] button[title="Add to route"]').first().click();
-      await admin.page.waitForTimeout(800);
+      await waitForTaskCount(admin.page, beforeCount + 1);
     }
-    await waitForTaskCount(admin.page, 4);
 
     const adminNames = await getRouteTaskNames(admin.page);
 
