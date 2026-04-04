@@ -41,7 +41,42 @@ fi
 echo "✅ Build successful"
 echo ""
 
-# 3. Migration safety check
+# 3. Unit tests (Vitest)
+echo "🧪 Running unit tests..."
+if ! npm run test 2>&1 | tail -n 20; then
+  echo ""
+  echo "❌ Unit tests FAILED!"
+  echo ""
+  echo "Options:"
+  echo "  1. Fix failing tests"
+  echo "  2. Run 'npm run test' locally to debug"
+  echo "  3. Skip this check with: git push --no-verify (NOT RECOMMENDED)"
+  echo ""
+  exit 1
+fi
+echo "✅ Unit tests passed"
+echo ""
+
+# 4. E2E tests (Playwright)
+echo "🎭 Running E2E tests..."
+if ! npm run test:e2e > /tmp/e2e-output.log 2>&1; then
+  echo ""
+  echo "❌ E2E tests FAILED!"
+  echo ""
+  echo "Test failures:"
+  tail -n 30 /tmp/e2e-output.log
+  echo ""
+  echo "Options:"
+  echo "  1. Fix failing E2E tests"
+  echo "  2. Run 'npm run test:e2e' locally to debug"
+  echo "  3. Skip this check with: git push --no-verify (NOT RECOMMENDED)"
+  echo ""
+  exit 1
+fi
+echo "✅ E2E tests passed"
+echo ""
+
+# 5. Migration safety check
 MIGRATIONS_CHANGED=$(git diff --name-only origin/main...HEAD | grep "supabase/migrations/.*\.sql" || true)
 
 if [ -n "$MIGRATIONS_CHANGED" ]; then
