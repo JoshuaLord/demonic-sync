@@ -231,24 +231,6 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
     <div className="h-full flex flex-col bg-[var(--bg-base)]" data-tour="task-library">
       {/* Header */}
       <div className="p-3 border-b border-[var(--border-standard)]">
-        {/* Title + Collapse Button */}
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-[var(--text-primary)]">Task Library</h2>
-          {onCollapse && (
-            <button
-              onClick={onCollapse}
-              className="p-1 hover:bg-[var(--bg-surface)] rounded transition-colors"
-              title="Collapse task library"
-            >
-              {position === 'sidebar' ? (
-                <ChevronRight size={18} className="text-[var(--text-tertiary)]" />
-              ) : (
-                <ChevronDown size={18} className="text-[var(--text-tertiary)]" />
-              )}
-            </button>
-          )}
-        </div>
-
         {/* Compact Filters */}
         <div className="space-y-2 mb-2">
           {/* Tier Filter - Multi-Select */}

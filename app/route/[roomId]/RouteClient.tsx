@@ -3,8 +3,9 @@
 import { supabase } from '@/lib/supabase';
 import { Room, RouteStep, OfficialRelic, OfficialRegion, MilestoneSelections } from '@/types';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { GripVertical, GripHorizontal, ChevronLeft, ChevronUp } from 'lucide-react';
+import { GripVertical, GripHorizontal, X, BookOpen, Trophy } from 'lucide-react';
 import TaskLibrary from './TaskLibrary';
+import BuildPlanner from './components/BuildPlanner';
 import {
   calculateMilestones,
   RELIC_TIERS,
@@ -38,6 +39,7 @@ import DragOverlayContent from './components/DragOverlayContent';
 import PlayerModal from './components/PlayerModal';
 import ShareModal from './components/ShareModal';
 import LiveCursors from './components/LiveCursors';
+import Tooltip from './components/Tooltip';
 import { usePresence } from './hooks/usePresence';
 
 type PlayerNames = Record<string, string>;
@@ -83,6 +85,7 @@ export default function RouteClient({
   const [libraryWidth, setLibraryWidth] = useState(350);
   const [libraryHeight, setLibraryHeight] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<'library' | 'unlocks'>('library');
 
   const tourTriggered = useRef(false);
 
@@ -139,6 +142,9 @@ export default function RouteClient({
 
     const storedHeight = localStorage.getItem('library_height');
     if (storedHeight) setLibraryHeight(parseInt(storedHeight, 10));
+
+    const storedTab = localStorage.getItem('sidebar_tab');
+    if (storedTab === 'library' || storedTab === 'unlocks') setSidebarTab(storedTab);
 
     setMounted(true);
   }, [room.id]);
@@ -498,6 +504,16 @@ export default function RouteClient({
     const newPosition = libraryPosition === 'sidebar' ? 'bottom' : 'sidebar';
     setLibraryPosition(newPosition);
     localStorage.setItem('library_position', newPosition);
+  }
+
+  function switchSidebarTab(tab: 'library' | 'unlocks') {
+    setSidebarTab(tab);
+    localStorage.setItem('sidebar_tab', tab);
+    // Auto-expand if collapsed
+    if (isLibraryCollapsed) {
+      setIsLibraryCollapsed(false);
+      localStorage.setItem('library_collapsed', 'false');
+    }
   }
 
   function handleResizeStart() { setIsResizing(true); }
@@ -979,7 +995,7 @@ export default function RouteClient({
             </div>
           </div>
 
-          {/* Task Library Pane */}
+          {/* Sidebar Pane (Library or Planner) */}
           <div
             className={`flex-shrink-0 bg-[var(--bg-base)] relative ${
               isLibraryCollapsed
@@ -1020,33 +1036,92 @@ export default function RouteClient({
             )}
 
             {isLibraryCollapsed ? (
-              <div className={`${
+              /* Collapsed: Vertical icon strip */
+              <div className={`h-full w-full ${
                 libraryPosition === 'sidebar'
-                  ? 'h-full flex flex-col items-center pt-4 border-l'
-                  : 'w-full flex flex-row justify-center items-center pl-4 border-t'
-              } border-[var(--border-standard)]`}>
-                <button
-                  onClick={toggleLibrary}
-                  className="p-2 hover:bg-[var(--bg-surface)] rounded transition-colors"
-                  title="Expand task library"
-                >
-                  {libraryPosition === 'sidebar' ? (
-                    <ChevronLeft size={20} className="text-[var(--text-tertiary)]" />
-                  ) : (
-                    <ChevronUp size={20} className="text-[var(--text-tertiary)]" />
-                  )}
-                </button>
+                  ? 'border-l border-[var(--border-standard)] flex flex-col items-center py-3 gap-2'
+                  : 'border-t border-[var(--border-standard)] flex flex-row justify-center items-center px-3 gap-2'
+              } bg-[var(--bg-elevated)]`}>
+                <Tooltip text="Task Library" position="left">
+                  <button
+                    onClick={() => switchSidebarTab('library')}
+                    className="p-2 rounded transition-all text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]"
+                  >
+                    <BookOpen size={18} />
+                  </button>
+                </Tooltip>
+                <Tooltip text="Unlocks" position="left">
+                  <button
+                    onClick={() => switchSidebarTab('unlocks')}
+                    className="p-2 rounded transition-all text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]"
+                  >
+                    <Trophy size={18} />
+                  </button>
+                </Tooltip>
               </div>
             ) : (
-              <TaskLibrary
-                roomId={room.id}
-                isAdmin={isAdmin}
-                onAddTask={addOfficialTask}
-                onAddCustomTask={addTask}
-                onCollapse={toggleLibrary}
-                position={libraryPosition}
-                routeSteps={steps}
-              />
+              /* Expanded: Content with top tab bar */
+              <div className="h-full w-full flex flex-col border-l border-[var(--border-standard)]">
+                {/* Tab Bar at Top */}
+                <div className="flex-shrink-0 flex items-center gap-1 px-3 py-2 bg-[var(--bg-elevated)] border-b border-[var(--border-standard)]">
+                  <button
+                    onClick={() => switchSidebarTab('library')}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded transition-all ${
+                      sidebarTab === 'library'
+                        ? 'bg-[var(--crimson)] text-white shadow-md'
+                        : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]'
+                    }`}
+                  >
+                    <BookOpen size={16} />
+                    <span className="text-sm font-semibold">Library</span>
+                  </button>
+                  <button
+                    onClick={() => switchSidebarTab('unlocks')}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded transition-all ${
+                      sidebarTab === 'unlocks'
+                        ? 'bg-[var(--crimson)] text-white shadow-md'
+                        : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]'
+                    }`}
+                  >
+                    <Trophy size={16} />
+                    <span className="text-sm font-semibold">Unlocks</span>
+                  </button>
+
+                  {/* Close Button */}
+                  <button
+                    onClick={toggleLibrary}
+                    className="ml-auto p-1.5 hover:bg-[var(--bg-surface)] rounded transition-colors"
+                    title="Close sidebar"
+                  >
+                    <X size={16} className="text-[var(--text-tertiary)]" />
+                  </button>
+                </div>
+
+                {/* Content Area */}
+                <div className="flex-1 min-h-0">
+                  {sidebarTab === 'library' ? (
+                    <TaskLibrary
+                      roomId={room.id}
+                      isAdmin={isAdmin}
+                      onAddTask={addOfficialTask}
+                      onAddCustomTask={addTask}
+                      onCollapse={toggleLibrary}
+                      position={libraryPosition}
+                      routeSteps={steps}
+                    />
+                  ) : (
+                    <BuildPlanner
+                      relics={relics}
+                      regions={regions}
+                      milestoneSelections={milestoneSelections}
+                      isAdmin={isAdmin}
+                      onMilestoneSelection={handleMilestoneSelection}
+                      onCollapse={toggleLibrary}
+                      position={libraryPosition}
+                    />
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>
