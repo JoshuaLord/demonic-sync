@@ -1,26 +1,60 @@
 #!/bin/bash
 
-# Pre-push hook to check migration safety
-# This prevents pushing potentially destructive migrations to the repository
+# Pre-push hook to run safety checks before pushing
+# This prevents pushing broken code or destructive migrations
 
 echo "🔍 Running pre-push safety checks..."
+echo ""
 
-# Check if there are new migration files being pushed
+# 1. TypeScript type check (fast, catches type errors)
+echo "📘 Checking TypeScript types..."
+if ! npm run type-check 2>&1 | grep -v "Type checking complete"; then
+  echo ""
+  echo "❌ TypeScript type check FAILED!"
+  echo "   Fix type errors before pushing."
+  echo ""
+  echo "Options:"
+  echo "  1. Fix the type errors shown above"
+  echo "  2. Skip this check with: git push --no-verify (NOT RECOMMENDED)"
+  echo ""
+  exit 1
+fi
+echo "✅ TypeScript types OK"
+echo ""
+
+# 2. Build check (catches missing imports, build errors)
+echo "🏗️  Running production build..."
+if ! npm run build > /tmp/build-output.log 2>&1; then
+  echo ""
+  echo "❌ Build FAILED!"
+  echo ""
+  echo "Build errors:"
+  tail -n 50 /tmp/build-output.log
+  echo ""
+  echo "Options:"
+  echo "  1. Fix the build errors shown above"
+  echo "  2. Run 'npm run build' locally to see full output"
+  echo "  3. Skip this check with: git push --no-verify (NOT RECOMMENDED)"
+  echo ""
+  exit 1
+fi
+echo "✅ Build successful"
+echo ""
+
+# 3. Migration safety check
 MIGRATIONS_CHANGED=$(git diff --name-only origin/main...HEAD | grep "supabase/migrations/.*\.sql" || true)
 
 if [ -n "$MIGRATIONS_CHANGED" ]; then
-  echo ""
   echo "📝 New migration files detected:"
   echo "$MIGRATIONS_CHANGED" | while read -r file; do
     echo "   - $file"
   done
   echo ""
 
-  # Run migration safety checker
   echo "🔒 Running migration safety checks..."
   if ! node scripts/check-migration-safety.js; then
     echo ""
-    echo "❌ Pre-push hook FAILED!"
+    echo "❌ Migration safety check FAILED!"
     echo "   Destructive migrations detected."
     echo ""
     echo "Options:"
@@ -29,7 +63,9 @@ if [ -n "$MIGRATIONS_CHANGED" ]; then
     echo ""
     exit 1
   fi
+  echo "✅ Migration safety OK"
+  echo ""
 fi
 
-echo "✅ Pre-push checks passed!"
+echo "✅ All pre-push checks passed!"
 echo ""
