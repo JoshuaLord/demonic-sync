@@ -241,23 +241,11 @@ export default function RouteClient({
   // ──────────────────────────────────────────────
   // Task CRUD
   // ──────────────────────────────────────────────
-  async function getNextStepOrder(): Promise<number> {
-    const { data } = await supabase
-      .from('route_steps')
-      .select('step_order')
-      .eq('room_id', room.id)
-      .order('step_order', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    return data ? data.step_order + 1 : 0;
-  }
-
+  // Note: step_order is now calculated server-side to prevent race conditions
   async function addTask(customText: string) {
     if (!customText.trim()) return;
-    const nextOrder = await getNextStepOrder();
     try {
       await apiStepInsert(room.id, {
-        step_order: nextOrder,
         step_type: 'custom',
         custom_text: customText,
         player_state: {},
@@ -280,10 +268,8 @@ export default function RouteClient({
       return;
     }
 
-    const nextOrder = await getNextStepOrder();
     try {
       await apiStepInsert(room.id, {
-        step_order: nextOrder,
         step_type: 'task',
         task_id: taskId,
         task_name: task.name,
@@ -741,13 +727,10 @@ export default function RouteClient({
       // Use the preview position the user saw, fall back to end of list
       const insertIndex = finalDropIndex ?? steps.length;
 
-      // Use a temp high order to avoid unique constraint collision
-      const tempOrder = 2000000000 - Math.floor(Math.random() * 1000000);
-
+      // Server will append to end, then we reorder to correct position
       let newStepTyped: RouteStep;
       try {
         const result = await apiStepInsert(room.id, {
-          step_order: tempOrder,
           step_type: 'task',
           task_id: task.id,
           task_name: task.name,

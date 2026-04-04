@@ -26,26 +26,65 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid step data' }, { status: 400 });
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('route_steps')
-    .insert({
-      room_id: roomId,
-      step_order: stepData.step_order,
-      step_type: stepData.step_type,
-      task_id: stepData.task_id ?? null,
-      task_name: stepData.task_name ?? null,
-      task_description: stepData.task_description ?? null,
-      task_tier: stepData.task_tier ?? null,
-      task_points: stepData.task_points ?? null,
-      task_region: stepData.task_region ?? null,
-      custom_text: stepData.custom_text ?? null,
-      player_state: stepData.player_state ?? {},
-    })
-    .select()
-    .single();
+  // Server-side step_order calculation with retry logic to handle race conditions
+  // When two admins add simultaneously, one might get a unique constraint violation
+  // We retry up to 3 times with recalculated order
+  let data: any = null;
+  let lastError: any = null;
 
-  if (error) {
-    console.error('Error inserting step:', error);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    // Calculate the next order
+    const { data: maxOrderData } = await supabaseAdmin
+      .from('route_steps')
+      .select('step_order')
+      .eq('room_id', roomId)
+      .order('step_order', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const nextOrder = maxOrderData ? maxOrderData.step_order + 1 : 0;
+
+    // Try to insert
+    const result = await supabaseAdmin
+      .from('route_steps')
+      .insert({
+        room_id: roomId,
+        step_order: nextOrder,
+        step_type: stepData.step_type,
+        task_id: stepData.task_id ?? null,
+        task_name: stepData.task_name ?? null,
+        task_description: stepData.task_description ?? null,
+        task_tier: stepData.task_tier ?? null,
+        task_points: stepData.task_points ?? null,
+        task_region: stepData.task_region ?? null,
+        custom_text: stepData.custom_text ?? null,
+        player_state: stepData.player_state ?? {},
+      })
+      .select()
+      .single();
+
+    // If successful, break out of retry loop
+    if (!result.error) {
+      data = result.data;
+      break;
+    }
+
+    // If it's a unique constraint violation (code 23505), retry
+    if (result.error.code === '23505') {
+      console.log(`Unique constraint collision on attempt ${attempt + 1}, retrying...`);
+      lastError = result.error;
+      // Small delay before retry to reduce collision likelihood
+      await new Promise(resolve => setTimeout(resolve, 10 * (attempt + 1)));
+      continue;
+    }
+
+    // For other errors, fail immediately
+    lastError = result.error;
+    break;
+  }
+
+  if (!data) {
+    console.error('Error inserting step after retries:', lastError);
     return NextResponse.json({ error: 'Failed to insert step' }, { status: 500 });
   }
 
