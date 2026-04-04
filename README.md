@@ -44,6 +44,12 @@ This is a community project built for fun and shared freely with the OSRS commun
 
 This is a Next.js project using Supabase for real-time database and storage.
 
+### Prerequisites
+
+- Node.js 20+
+- Docker (for local Supabase)
+- npm or yarn
+
 ### Development
 
 ```bash
@@ -55,6 +61,14 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to see the app.
+
+## Contributing
+
+This is a community project! Contributions, issues, and feature requests are welcome.
+
+- **Repository:** [github.com/AurorasDad/demonic-sync](https://github.com/AurorasDad/demonic-sync)
+- **Report bugs:** [Create an issue](https://github.com/AurorasDad/demonic-sync/issues)
+- **Suggest features:** [Open a discussion](https://github.com/AurorasDad/demonic-sync/discussions)
 
 ## Data Attribution
 
