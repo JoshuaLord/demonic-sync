@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useAdminSession } from './useAdminSession';
 
 export type PresenceUser = {
   id: string;
@@ -29,17 +30,16 @@ function generateIdentity() {
   };
 }
 
-function generateSessionId() {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
-}
-
-export function usePresence(roomId: string) {
+export function usePresence(
+  roomId: string,
+  isAdmin: boolean,
+  adminKey: string | null
+) {
   const [others, setOthers] = useState<PresenceUser[]>([]);
   const [ready, setReady] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [displayColor, setDisplayColor] = useState('');
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const sessionIdRef = useRef<string>('');
   const identityRef = useRef<{ color: string; name: string } | null>(null);
   const mouseRef = useRef({ x: 0, y: 0 });
   const lastBroadcastRef = useRef(0);
@@ -49,9 +49,12 @@ export function usePresence(roomId: string) {
   // Map of session ID -> broadcast name override (prevents sync from reverting to stale name)
   const nameOverridesRef = useRef<Map<string, string>>(new Map());
 
+  // Admin session management for broadcasting control
+  const { sessionId, realtimeToken, canBroadcast, queuePosition, totalAdmins } =
+    useAdminSession(roomId, isAdmin, adminKey);
+
   // Generate identity on mount (client-side only), restoring saved name/color from localStorage
   useEffect(() => {
-    sessionIdRef.current = generateSessionId();
     const id = generateIdentity();
     const savedName = localStorage.getItem('presence_name');
     const savedColor = localStorage.getItem('presence_color');
@@ -66,15 +69,16 @@ export function usePresence(roomId: string) {
 
   const broadcastCursor = useCallback(() => {
     const channel = channelRef.current;
-    if (!channel || !identityRef.current) return;
+    if (!channel || !identityRef.current || !canBroadcast) return;
 
     const now = Date.now();
-    if (now - lastBroadcastRef.current < 50) {
+    // Throttle: 50ms → 100ms for cost reduction
+    if (now - lastBroadcastRef.current < 100) {
       if (!broadcastTimeoutRef.current) {
         broadcastTimeoutRef.current = setTimeout(() => {
           broadcastTimeoutRef.current = null;
           broadcastCursor();
-        }, 50);
+        }, 100);
       }
       return;
     }
@@ -84,21 +88,34 @@ export function usePresence(roomId: string) {
       type: 'broadcast',
       event: 'cursor',
       payload: {
-        id: sessionIdRef.current,
+        id: sessionId,
         x: mouseRef.current.x,
         y: mouseRef.current.y,
       },
     });
-  }, []);
+  }, [canBroadcast, sessionId]);
+
+  // Push refreshed JWT to Realtime on each heartbeat
+  useEffect(() => {
+    if (!realtimeToken || !isAdmin) return;
+    supabase.realtime.setAuth(realtimeToken);
+  }, [realtimeToken, isAdmin]);
 
   useEffect(() => {
     // Wait for client-side identity generation
     if (!ready) return;
 
-    const sessionId = sessionIdRef.current;
+    // CRITICAL: Only connect to presence/broadcast if admin with a valid token
+    if (!isAdmin || !realtimeToken) return;
+
+    // Set the custom JWT before creating the channel
+    supabase.realtime.setAuth(realtimeToken);
 
     const channel = supabase.channel(`presence_${roomId}`, {
-      config: { presence: { key: sessionId } },
+      config: {
+        presence: { key: sessionId },
+        private: true, // Enforce RLS on realtime.messages
+      },
     });
 
     channelRef.current = channel;
@@ -163,7 +180,9 @@ export function usePresence(roomId: string) {
 
     const handleMouseMove = (e: MouseEvent) => {
       mouseRef.current = { x: e.clientX, y: e.clientY };
-      broadcastCursor();
+      if (canBroadcast) {
+        broadcastCursor();
+      }
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -174,7 +193,7 @@ export function usePresence(roomId: string) {
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [roomId, ready, broadcastCursor]);
+  }, [roomId, ready, isAdmin, sessionId, realtimeToken, canBroadcast, broadcastCursor]);
 
   const setName = useCallback((newName: string) => {
     const trimmed = newName.trim().slice(0, 20);
@@ -183,29 +202,33 @@ export function usePresence(roomId: string) {
     setDisplayName(trimmed);
     localStorage.setItem('presence_name', trimmed);
     const channel = channelRef.current;
-    if (channel) {
+    if (channel && isAdmin && canBroadcast) {
       // Broadcast name change (same mechanism as cursors — reliable)
       channel.send({
         type: 'broadcast',
         event: 'name_change',
         payload: {
-          id: sessionIdRef.current,
+          id: sessionId,
           name: trimmed,
         },
       });
       // Also re-track presence so new joiners get the correct name
       channel.track({
-        id: sessionIdRef.current,
+        id: sessionId,
         name: trimmed,
         color: identityRef.current.color,
       });
     }
-  }, []);
+  }, [isAdmin, canBroadcast, sessionId]);
 
   return {
-    others,
+    others: isAdmin ? others : [], // Viewers don't see cursors
     color: displayColor,
     name: displayName,
     setName,
+    // Expose queue status for UI
+    queuePosition,
+    totalAdmins,
+    canBroadcast,
   };
 }

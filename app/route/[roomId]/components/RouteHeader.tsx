@@ -3,6 +3,7 @@
 import { Pencil, HelpCircle } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import PresenceAvatars from './PresenceAvatars';
+import BroadcastStatus from './BroadcastStatus';
 import type { PresenceUser } from '../hooks/usePresence';
 
 type PlayerNames = Record<string, string>;
@@ -34,6 +35,9 @@ export interface RouteHeaderProps {
   presenceColor: string;
   presenceName: string;
   onPresenceNameChange?: (name: string) => void;
+  canBroadcast?: boolean;
+  queuePosition?: number;
+  totalAdmins?: number;
 }
 
 export default function RouteHeader({
@@ -57,6 +61,9 @@ export default function RouteHeader({
   presenceColor,
   presenceName,
   onPresenceNameChange,
+  canBroadcast = false,
+  queuePosition = 0,
+  totalAdmins = 0,
 }: RouteHeaderProps) {
   return (
     <div className="border-b border-[var(--border-strong)] bg-[var(--bg-elevated)] px-6 py-4">
@@ -101,6 +108,14 @@ export default function RouteHeader({
                 {mounted && (isAdmin ? 'ADMIN' : 'VIEW-ONLY')}
               </span>
             </div>
+
+            {mounted && isAdmin && (
+              <BroadcastStatus
+                canBroadcast={canBroadcast}
+                queuePosition={queuePosition}
+                totalAdmins={totalAdmins}
+              />
+            )}
 
             <div className="flex items-center gap-3 text-sm font-mono font-semibold">
               <span className="text-[var(--crimson)]" suppressHydrationWarning>

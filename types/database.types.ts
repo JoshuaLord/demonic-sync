@@ -127,6 +127,41 @@ export type Database = {
         }
         Relationships: []
       }
+      realtime_admin_sessions: {
+        Row: {
+          admin_key_hash: string
+          id: string
+          joined_at: string
+          last_heartbeat: string
+          room_id: string
+          session_id: string
+        }
+        Insert: {
+          admin_key_hash: string
+          id?: string
+          joined_at?: string
+          last_heartbeat?: string
+          room_id: string
+          session_id: string
+        }
+        Update: {
+          admin_key_hash?: string
+          id?: string
+          joined_at?: string
+          last_heartbeat?: string
+          room_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "realtime_admin_sessions_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           admin_key: string
@@ -242,6 +277,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_stale_admin_sessions: { Args: never; Returns: number }
+      is_active_broadcaster: { Args: never; Returns: boolean }
       reorder_route_steps:
         | {
             Args: { p_room_id: string; step_updates: Json[] }

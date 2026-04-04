@@ -112,9 +112,18 @@ export default function RouteClient({
   );
 
   // ──────────────────────────────────────────────
-  // Presence (live cursors)
+  // Helper to get admin key from localStorage
   // ──────────────────────────────────────────────
-  const { others: presenceOthers, color: presenceColor, name: presenceName, setName: setPresenceName } = usePresence(room.id);
+  const getAdminKey = (roomId: string): string | null => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(`admin_key_${roomId}`);
+  };
+
+  // ──────────────────────────────────────────────
+  // Presence (live cursors) - admin-only
+  // ──────────────────────────────────────────────
+  const presence = usePresence(room.id, isAdmin, getAdminKey(room.id));
+  const { others: presenceOthers, color: presenceColor, name: presenceName, setName: setPresenceName } = presence;
 
   // ──────────────────────────────────────────────
   // Init & localStorage
@@ -918,6 +927,9 @@ export default function RouteClient({
         presenceName={presenceName}
         onPresenceNameChange={setPresenceName}
         onStartTour={handleStartTour}
+        canBroadcast={presence.canBroadcast}
+        queuePosition={presence.queuePosition}
+        totalAdmins={presence.totalAdmins}
       />
 
       <DndContext
