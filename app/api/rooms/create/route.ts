@@ -1,17 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import crypto from 'crypto';
 
 export async function POST() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
   const roomId = crypto.randomUUID();
   const adminKey = crypto.randomBytes(32).toString('hex');
 
-  const { error } = await supabase.from('rooms').insert({
+  const { error } = await supabaseAdmin.from('rooms').insert({
     id: roomId,
     admin_key: adminKey,
     name: 'Untitled Route',
@@ -21,7 +16,7 @@ export async function POST() {
 
   if (error) {
     console.error('Error creating room:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create room' }, { status: 500 });
   }
 
   return NextResponse.json({ roomId, adminKey });

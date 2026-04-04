@@ -1,7 +1,8 @@
 'use client';
 
 import { supabase } from '@/lib/supabase';
-import { Room, RouteStep, OfficialRelic, OfficialRegion, MilestoneSelections } from '@/types';
+import { SafeRoom, RouteStep, OfficialRelic, OfficialRegion, MilestoneSelections } from '@/types';
+import { apiRoomUpdate, apiStepInsert, apiStepUpdate, apiStepDelete } from '@/lib/api';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { GripVertical, GripHorizontal, X, BookOpen, Trophy } from 'lucide-react';
 import TaskLibrary from './TaskLibrary';
@@ -50,7 +51,7 @@ export default function RouteClient({
   relics,
   regions,
 }: {
-  room: Room;
+  room: SafeRoom;
   initialSteps: RouteStep[];
   relics: OfficialRelic[];
   regions: OfficialRegion[];
@@ -254,19 +255,20 @@ export default function RouteClient({
   async function addTask(customText: string) {
     if (!customText.trim()) return;
     const nextOrder = await getNextStepOrder();
-    const { error } = await supabase
-      .from('route_steps')
-      .insert({
-        room_id: room.id,
+    try {
+      await apiStepInsert(room.id, {
         step_order: nextOrder,
         step_type: 'custom',
         custom_text: customText,
         player_state: {},
       });
-    if (error) alert('Error adding task: ' + error.message);
+    } catch (err: any) {
+      alert('Error adding task: ' + err.message);
+    }
   }
 
   async function addOfficialTask(taskId: number) {
+    // Read-only fetch of official task data (anon key is fine for reads)
     const { data: task, error: fetchError } = await supabase
       .from('official_tasks')
       .select('*')
@@ -279,10 +281,8 @@ export default function RouteClient({
     }
 
     const nextOrder = await getNextStepOrder();
-    const { error } = await supabase
-      .from('route_steps')
-      .insert({
-        room_id: room.id,
+    try {
+      await apiStepInsert(room.id, {
         step_order: nextOrder,
         step_type: 'task',
         task_id: taskId,
@@ -293,7 +293,9 @@ export default function RouteClient({
         task_region: task.region,
         player_state: {},
       });
-    if (error) alert('Error adding task: ' + error.message);
+    } catch (err: any) {
+      alert('Error adding task: ' + err.message);
+    }
   }
 
   // ──────────────────────────────────────────────
@@ -329,12 +331,12 @@ export default function RouteClient({
   }
 
   async function savePlayers() {
-    const { error } = await supabase
-      .from('rooms')
-      .update({ player_names: editingPlayers })
-      .eq('id', room.id);
-    if (error) { alert('Error saving players: ' + error.message); return; }
-    setShowPlayerModal(false);
+    try {
+      await apiRoomUpdate(room.id, 'update_players', { playerNames: editingPlayers });
+      setShowPlayerModal(false);
+    } catch (err: any) {
+      alert('Error saving players: ' + err.message);
+    }
   }
 
   // ──────────────────────────────────────────────
@@ -365,16 +367,13 @@ export default function RouteClient({
       }, 800);
     }
 
-    const { error } = await supabase
-      .from('route_steps')
-      .update({ player_state: updatedPlayerState })
-      .eq('id', stepId);
-
-    if (error) {
-      alert('Error updating checkbox: ' + error.message);
+    try {
+      await apiStepUpdate(room.id, 'update_checkbox', { stepId, playerState: updatedPlayerState });
+    } catch (err: any) {
+      alert('Error updating checkbox: ' + err.message);
       setSteps((current) => current.map((s) => (s.id === stepId ? step : s)));
     }
-  }, [isAdmin, steps, playerNames]);
+  }, [isAdmin, steps, playerNames, room.id]);
 
   const toggleMilestoneCheckbox = useCallback(async (milestoneId: string, playerId: string) => {
     if (!isAdmin) return;
@@ -385,13 +384,10 @@ export default function RouteClient({
     };
     setMilestonePlayerState(updatedMilestoneState);
 
-    const { error } = await supabase
-      .from('rooms')
-      .update({ milestone_player_state: updatedMilestoneState })
-      .eq('id', room.id);
-
-    if (error) {
-      alert('Error updating milestone checkbox: ' + error.message);
+    try {
+      await apiRoomUpdate(room.id, 'update_milestone_state', { milestonePlayerState: updatedMilestoneState });
+    } catch (err: any) {
+      alert('Error updating milestone checkbox: ' + err.message);
       setMilestonePlayerState(milestonePlayerState);
     }
   }, [isAdmin, milestonePlayerState, room.id]);
@@ -404,13 +400,10 @@ export default function RouteClient({
 
     setMilestoneSelections(updatedSelections);
 
-    const { error } = await supabase
-      .from('rooms')
-      .update({ milestone_selections: updatedSelections })
-      .eq('id', room.id);
-
-    if (error) {
-      alert('Error updating milestone selection: ' + error.message);
+    try {
+      await apiRoomUpdate(room.id, 'update_milestone_selections', { milestoneSelections: updatedSelections });
+    } catch (err: any) {
+      alert('Error updating milestone selection: ' + err.message);
       setMilestoneSelections(milestoneSelections);
     }
   }, [isAdmin, milestoneSelections, room.id]);
@@ -423,13 +416,11 @@ export default function RouteClient({
     setDeleteClickedId(null);
     setSteps((current) => current.filter((s) => s.id !== stepId));
 
-    const { error } = await supabase
-      .from('route_steps')
-      .delete()
-      .eq('id', stepId);
-
-    if (error) {
-      alert('Error deleting task: ' + error.message);
+    try {
+      await apiStepDelete(room.id, stepId);
+    } catch (err: any) {
+      alert('Error deleting task: ' + err.message);
+      // Refetch steps on error to restore correct state
       const { data } = await supabase
         .from('route_steps')
         .select('*')
@@ -459,12 +450,12 @@ export default function RouteClient({
     setRoomName(trimmedName);
     setIsEditingName(false);
 
-    const { error } = await supabase
-      .from('rooms')
-      .update({ name: trimmedName })
-      .eq('id', room.id);
-
-    if (error) { alert('Error updating room name: ' + error.message); setRoomName(roomName); }
+    try {
+      await apiRoomUpdate(room.id, 'update_name', { name: trimmedName });
+    } catch (err: any) {
+      alert('Error updating room name: ' + err.message);
+      setRoomName(roomName);
+    }
   }
 
   function cancelEditingName() {
@@ -753,10 +744,9 @@ export default function RouteClient({
       // Use a temp high order to avoid unique constraint collision
       const tempOrder = 2000000000 - Math.floor(Math.random() * 1000000);
 
-      const { data: newStep, error: insertError } = await supabase
-        .from('route_steps')
-        .insert({
-          room_id: room.id,
+      let newStepTyped: RouteStep;
+      try {
+        const result = await apiStepInsert(room.id, {
           step_order: tempOrder,
           step_type: 'task',
           task_id: task.id,
@@ -766,16 +756,12 @@ export default function RouteClient({
           task_points: task.points,
           task_region: task.region,
           player_state: {},
-        })
-        .select()
-        .single();
-
-      if (insertError || !newStep) {
-        alert('Error adding task: ' + insertError?.message);
+        });
+        newStepTyped = result.step as RouteStep;
+      } catch (err: any) {
+        alert('Error adding task: ' + err.message);
         return;
       }
-
-      const newStepTyped = newStep as RouteStep;
 
       // Optimistically insert at the correct position
       const updatedSteps = [...steps];
@@ -798,13 +784,10 @@ export default function RouteClient({
         step_order: index,
       }));
 
-      const { error: reorderError } = await supabase.rpc('reorder_route_steps', {
-        p_room_id: room.id,
-        step_updates: updates,
-      });
-
-      if (reorderError) {
-        console.error('Error reordering:', reorderError);
+      try {
+        await apiStepUpdate(room.id, 'reorder', { stepUpdates: updates });
+      } catch (err: any) {
+        console.error('Error reordering:', err);
       }
 
       return;
@@ -830,14 +813,11 @@ export default function RouteClient({
       step_order: index,
     }));
 
-    const { error } = await supabase.rpc('reorder_route_steps', {
-      p_room_id: room.id,
-      step_updates: updates,
-    });
-
-    if (error) {
-      console.error('Error reordering steps:', error);
-      alert('Error reordering tasks: ' + error.message);
+    try {
+      await apiStepUpdate(room.id, 'reorder', { stepUpdates: updates });
+    } catch (err: any) {
+      console.error('Error reordering steps:', err);
+      alert('Error reordering tasks: ' + err.message);
       const { data } = await supabase
         .from('route_steps')
         .select('*')

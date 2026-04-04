@@ -15,10 +15,10 @@ export default async function RoutePage({
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // Fetch room data
+  // Fetch room data (exclude admin_key for security)
   const { data: room, error } = await supabase
     .from('rooms')
-    .select('*')
+    .select('id, name, player_names, milestone_selections, milestone_player_state, created_at, updated_at')
     .eq('id', roomId)
     .single();
 
