@@ -81,6 +81,7 @@ const SortableTaskItem = memo(function SortableTaskItem({
     <div
       ref={setNodeRef}
       style={style}
+      data-testid="route-task-item"
       {...(isPreviewStep ? {} : attributes)}
       {...(isPreviewStep ? {} : listeners)}
       className={`rounded-md p-1.5 flex gap-2 items-center group ${

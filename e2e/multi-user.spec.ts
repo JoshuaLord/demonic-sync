@@ -60,6 +60,15 @@ async function waitForTaskCount(page: Page, count: number, timeout = 8000) {
   return names;
 }
 
+// Helper: Get a route task item and ensure it's visible
+async function getVisibleRouteItem(page: Page, index = 0) {
+  const routeArea = page.locator('[data-tour="route-area"]');
+  const taskItem = routeArea.locator('[data-testid="route-task-item"]').nth(index);
+  await taskItem.scrollIntoViewIfNeeded();
+  await taskItem.waitFor({ state: 'visible', timeout: 5000 });
+  return taskItem;
+}
+
 test.describe('Multi-User: Real-time task sync', () => {
   test('viewer sees task added by admin in real-time', async ({ browser }) => {
     // Admin creates a room
@@ -114,8 +123,7 @@ test.describe('Multi-User: Real-time task sync', () => {
     await waitForTaskCount(viewer.page, 1);
 
     // Admin deletes the task
-    const routeArea = admin.page.locator('[data-tour="route-area"]');
-    const taskItem = routeArea.locator('.group').first();
+    const taskItem = await getVisibleRouteItem(admin.page, 0);
     await taskItem.hover();
     await taskItem.locator('button[title="Delete"]').click();
     await taskItem.locator('button[title="Click again to confirm"]').click();
@@ -326,7 +334,7 @@ test.describe('Multi-User: Simultaneous actions', () => {
     await waitForTaskCount(admin2.page, 2);
 
     // Admin1 deletes the first task while Admin2 adds a new one
-    const deleteItem = admin1.page.locator('[data-tour="route-area"] .group').first();
+    const deleteItem = await getVisibleRouteItem(admin1.page, 0);
     await deleteItem.hover();
     await deleteItem.locator('button[title="Delete"]').click();
 

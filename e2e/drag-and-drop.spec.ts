@@ -23,8 +23,12 @@ async function createRoom(page: Page): Promise<string> {
   const roomId = url.match(/\/route\/([^?]+)/)?.[1] || '';
   expect(roomId).toBeTruthy();
 
-  // Wait for the page to fully load (task library should be visible)
+  // Wait for the page to fully load and ensure task library tab is visible
   await page.waitForSelector('[data-tour="task-library"]', { timeout: 10000 });
+
+  // Ensure sidebar is expanded and on Library tab (not Unlocks)
+  // The sidebar should be expanded by default, but let's verify the library content is visible
+  await page.waitForSelector('[data-tour="task-library"] input[placeholder*="Search"]', { timeout: 10000 });
 
   return roomId;
 }
@@ -64,8 +68,8 @@ test.describe('Room Creation & Setup', () => {
     // Should see the route page with empty state
     await expect(page.locator('text=Drag tasks here to build your route')).toBeVisible();
 
-    // Task library should be visible
-    await expect(page.locator('text=Task Library')).toBeVisible();
+    // Task library should be visible (check for search box instead of removed header)
+    await expect(page.locator('[data-tour="task-library"] input[placeholder*="Search"]')).toBeVisible();
   });
 });
 
@@ -203,7 +207,9 @@ test.describe('Task Deletion', () => {
 
     // Hover over the task to reveal delete button
     const routeArea = page.locator('[data-tour="route-area"]');
-    const taskItem = routeArea.locator('.group').first();
+    const taskItem = routeArea.locator('[data-testid="route-task-item"]').first();
+    await taskItem.scrollIntoViewIfNeeded();
+    await taskItem.waitFor({ state: 'visible', timeout: 5000 });
     await taskItem.hover();
 
     // Click delete button once (first click = confirm prompt)
@@ -247,7 +253,7 @@ test.describe('View-Only Mode', () => {
 
     // The route area should show the task
     const routeArea = viewerPage.locator('[data-tour="route-area"]');
-    const taskItem = routeArea.locator('.group').first();
+    const taskItem = routeArea.locator('[data-testid="route-task-item"]').first();
 
     if (await taskItem.isVisible().catch(() => false)) {
       await taskItem.hover();

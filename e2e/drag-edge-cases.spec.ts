@@ -262,7 +262,9 @@ test.describe('Edge Case: Rapid interactions', () => {
 
     // Immediately delete it
     const routeArea = page.locator('[data-tour="route-area"]');
-    const taskItem = routeArea.locator('.group').first();
+    const taskItem = routeArea.locator('[data-testid="route-task-item"]').first();
+    await taskItem.scrollIntoViewIfNeeded();
+    await taskItem.waitFor({ state: 'visible', timeout: 5000 });
     await taskItem.hover();
 
     const deleteButton = taskItem.locator('button[title="Delete"]');
@@ -396,7 +398,9 @@ test.describe('Edge Case: Page interaction after drag', () => {
 
     // And verify delete still works
     const routeTaskArea = page.locator('[data-tour="route-area"]');
-    const taskItem = routeTaskArea.locator('.group').first();
+    const taskItem = routeTaskArea.locator('[data-testid="route-task-item"]').first();
+    await taskItem.scrollIntoViewIfNeeded();
+    await taskItem.waitFor({ state: 'visible', timeout: 5000 });
     await taskItem.hover();
     const deleteButton = taskItem.locator('button[title="Delete"]');
     await deleteButton.click();

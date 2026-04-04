@@ -43,3 +43,7 @@ next-env.d.ts
 # database backups (contain sensitive data)
 backup-*.sql
 *.dump
+
+# Test artifacts
+playwright-report/
+test-results/

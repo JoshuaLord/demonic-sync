@@ -60,24 +60,30 @@ export type Database = {
           created_at: string | null
           description: string | null
           display_order: number
+          icon_url: string | null
           id: number
           name: string
+          short_description: string | null
           tier: number
         }
         Insert: {
           created_at?: string | null
           description?: string | null
           display_order: number
+          icon_url?: string | null
           id?: number
           name: string
+          short_description?: string | null
           tier: number
         }
         Update: {
           created_at?: string | null
           description?: string | null
           display_order?: number
+          icon_url?: string | null
           id?: number
           name?: string
+          short_description?: string | null
           tier?: number
         }
         Relationships: []

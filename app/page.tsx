@@ -9,16 +9,26 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
 
   async function createRoom() {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const response = await fetch('/api/rooms/create', {
-      method: 'POST',
-    });
+      const response = await fetch('/api/rooms/create', {
+        method: 'POST',
+      });
 
-    const { roomId, adminKey } = await response.json();
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-    // Redirect to room with admin key
-    router.push(`/route/${roomId}?key=${adminKey}`);
+      const { roomId, adminKey } = await response.json();
+
+      // Redirect to room with admin key
+      router.push(`/route/${roomId}?key=${adminKey}`);
+    } catch (error) {
+      console.error('Error creating room:', error);
+      alert('Failed to create room. Please check the console for details.');
+      setLoading(false);
+    }
   }
 
   return (
