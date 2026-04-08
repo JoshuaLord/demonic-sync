@@ -1,25 +1,17 @@
 'use client';
 
+import { getTierClasses } from '@/lib/format-utils';
+
 interface DragOverlayContentProps {
   task: {
-    id: number;
+    id: number | string;
     name: string;
-    tier?: string;
-    points?: number;
-    region?: string;
+    tier?: string | null;
+    points?: number | null;
+    region?: string | null;
   };
   isOverRoute: boolean;
   sourceType: 'library' | 'route';
-}
-
-function getTierClasses(tier: string): string {
-  switch (tier) {
-    case 'Easy': return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
-    case 'Medium': return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
-    case 'Hard': return 'bg-orange-500/10 text-orange-600 dark:text-orange-400';
-    case 'Elite': return 'bg-purple-500/10 text-purple-600 dark:text-purple-400';
-    default: return 'bg-red-500/10 text-red-600 dark:text-red-400';
-  }
 }
 
 export default function DragOverlayContent({ task, isOverRoute, sourceType }: DragOverlayContentProps) {

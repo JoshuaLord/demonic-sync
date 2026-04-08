@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X, Check, Sparkles, Crown, Flame, Skull } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import { OfficialRelic, OfficialRegion } from '@/types';
+import { toRomanNumeral } from '@/lib/format-utils';
 
 interface RelicSelectionModalProps {
   isOpen: boolean;
@@ -11,32 +12,19 @@ interface RelicSelectionModalProps {
   selectedId: number | null;
   onSelect: (id: number | null) => void;
   isRelic: boolean;
+  disabledIds?: number[];
   title: string;
 }
 
-// Tier-specific styling and icons
-const getTierConfig = (tier: number) => {
-  switch (tier) {
-    case 1:
-      return { icon: Sparkles, color: 'from-gray-600 to-gray-700', label: 'Tier 1', border: 'border-gray-500' };
-    case 2:
-      return { icon: Flame, color: 'from-green-600 to-green-700', label: 'Tier 2', border: 'border-green-500' };
-    case 3:
-      return { icon: Flame, color: 'from-blue-600 to-blue-700', label: 'Tier 3', border: 'border-blue-500' };
-    case 4:
-      return { icon: Crown, color: 'from-purple-600 to-purple-700', label: 'Tier 4', border: 'border-purple-500' };
-    case 5:
-      return { icon: Crown, color: 'from-orange-600 to-orange-700', label: 'Tier 5', border: 'border-orange-500' };
-    case 6:
-      return { icon: Skull, color: 'from-red-600 to-red-700', label: 'Tier 6', border: 'border-red-500' };
-    case 7:
-      return { icon: Skull, color: 'from-pink-600 to-pink-700', label: 'Tier 7', border: 'border-pink-500' };
-    case 8:
-      return { icon: Crown, color: 'from-yellow-500 to-amber-600', label: 'Tier 8 - Legendary', border: 'border-yellow-500' };
-    default:
-      return { icon: Sparkles, color: 'from-gray-600 to-gray-700', label: `Tier ${tier}`, border: 'border-gray-500' };
-  }
+// Convert name to image filename (matches scraper output)
+const nameToFilename = (name: string) => {
+  return name
+    .toLowerCase()
+    .replace(/[']/g, '') // Remove apostrophes
+    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with dash
+    .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
 };
+
 
 export default function RelicSelectionModal({
   isOpen,
@@ -45,10 +33,12 @@ export default function RelicSelectionModal({
   selectedId,
   onSelect,
   isRelic,
+  disabledIds = [],
   title
 }: RelicSelectionModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -81,7 +71,6 @@ export default function RelicSelectionModal({
   const handleSelect = (id: number) => {
     const isSelected = id === selectedId;
     onSelect(isSelected ? null : id);
-    onClose();
   };
 
   // Group relics by tier for visual separation
@@ -97,8 +86,8 @@ export default function RelicSelectionModal({
   const renderRelicCard = (relic: OfficialRelic) => {
     const isSelected = relic.id === selectedId;
     const isHovered = hoveredId === relic.id;
-    const tierConfig = getTierConfig(relic.tier);
-    const TierIcon = tierConfig.icon;
+    const imagePath = `/images/relics/${nameToFilename(relic.name)}.png`;
+    const imgFailed = failedImages.has(relic.id);
 
     return (
       <button
@@ -112,15 +101,9 @@ export default function RelicSelectionModal({
             : 'border-[var(--border-standard)] bg-[var(--bg-surface)] hover:border-[var(--gold)]/50 hover:shadow-lg hover:scale-102'
         }`}
       >
-        {/* Tier badge */}
-        <div className={`absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r ${tierConfig.color} text-white shadow-md z-10`}>
-          <TierIcon size={10} />
-          <span>T{relic.tier}</span>
-        </div>
-
         {/* Selected badge */}
         {isSelected && (
-          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--gold)] text-white shadow-lg z-10 animate-pulse">
+          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--gold)] text-white shadow-lg z-10">
             <Check size={12} strokeWidth={3} />
             <span className="text-[10px] font-bold">SELECTED</span>
           </div>
@@ -128,18 +111,25 @@ export default function RelicSelectionModal({
 
         {/* Card content */}
         <div className="p-4 flex flex-col items-center gap-3">
-          {/* Icon or fallback */}
-          <div className={`relative w-20 h-20 rounded-lg border-2 ${isSelected ? tierConfig.border : 'border-[var(--border-standard)]'} bg-[var(--bg-elevated)] flex items-center justify-center overflow-hidden transition-all duration-300 ${isHovered ? 'scale-110 shadow-lg' : ''}`}>
-            {relic.icon_url ? (
-              <img
-                src={relic.icon_url}
-                alt={relic.name}
-                className="w-full h-full object-cover"
-              />
+          {/* Relic image or pentagon placeholder */}
+          <div className={`relative w-20 h-20 flex items-center justify-center transition-all duration-300 ${isHovered ? 'scale-110' : ''}`}>
+            {imgFailed ? (
+              <svg className="w-full h-full" viewBox="0 0 80 80" fill="none">
+                <polygon
+                  points="40,4 76,28 62,72 18,72 4,28"
+                  stroke="var(--border-strong)"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 3"
+                  fill="none"
+                />
+              </svg>
             ) : (
-              <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${tierConfig.color}`}>
-                <TierIcon size={32} className="text-white/70" />
-              </div>
+              <img
+                src={imagePath}
+                alt={relic.name}
+                className="w-full h-full object-contain"
+                onError={() => setFailedImages(prev => new Set(prev).add(relic.id))}
+              />
             )}
           </div>
 
@@ -179,36 +169,51 @@ export default function RelicSelectionModal({
 
   const renderRegionCard = (region: OfficialRegion) => {
     const isSelected = region.id === selectedId;
+    const isDisabled = disabledIds.includes(region.id);
     const isHovered = hoveredId === region.id;
+    const imagePath = `/images/regions/${nameToFilename(region.name)}.png`;
+    const imgFailed = failedImages.has(region.id);
 
     return (
       <button
         key={region.id}
-        onClick={() => handleSelect(region.id)}
+        onClick={() => !isDisabled && handleSelect(region.id)}
         onMouseEnter={() => setHoveredId(region.id)}
         onMouseLeave={() => setHoveredId(null)}
+        disabled={isDisabled}
         className={`group relative overflow-hidden rounded-lg border-2 transition-all duration-300 ${
-          isSelected
-            ? 'border-[var(--gold)] bg-gradient-to-b from-[var(--gold)]/20 via-[var(--gold)]/10 to-transparent shadow-lg shadow-[var(--gold)]/30 scale-105'
-            : 'border-[var(--border-standard)] bg-[var(--bg-surface)] hover:border-[var(--gold)]/50 hover:shadow-lg hover:scale-102'
+          isDisabled
+            ? 'border-[var(--border-standard)] bg-[var(--bg-surface)] opacity-40 cursor-not-allowed grayscale'
+            : isSelected
+              ? 'border-[var(--gold)] bg-gradient-to-b from-[var(--gold)]/20 via-[var(--gold)]/10 to-transparent shadow-lg shadow-[var(--gold)]/30 scale-105'
+              : 'border-[var(--border-standard)] bg-[var(--bg-surface)] hover:border-[var(--gold)]/50 hover:shadow-lg hover:scale-102'
         }`}
       >
         {/* Selected badge */}
         {isSelected && (
-          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--gold)] text-white shadow-lg z-10 animate-pulse">
+          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--gold)] text-white shadow-lg z-10">
             <Check size={12} strokeWidth={3} />
             <span className="text-[10px] font-bold">SELECTED</span>
           </div>
         )}
 
         <div className="p-4 flex flex-col items-center gap-3">
-          {/* Region icon placeholder */}
-          <div className={`w-20 h-20 rounded-lg border-2 ${isSelected ? 'border-[var(--gold)]' : 'border-[var(--border-standard)]'} bg-gradient-to-br from-[var(--crimson)]/20 to-[var(--bg-elevated)] flex items-center justify-center text-3xl transition-all duration-300 ${isHovered ? 'scale-110 shadow-lg' : ''}`}>
-            🗺️
+          {/* Region image or rounded square placeholder */}
+          <div className={`relative w-20 h-20 flex items-center justify-center transition-all duration-300 ${isHovered && !isDisabled ? 'scale-110' : ''}`}>
+            {imgFailed ? (
+              <div className="w-full h-full rounded-lg border-2 border-dashed border-[var(--border-strong)]" />
+            ) : (
+              <img
+                src={imagePath}
+                alt={region.name}
+                className="w-full h-full object-contain"
+                onError={() => setFailedImages(prev => new Set(prev).add(region.id))}
+              />
+            )}
           </div>
 
           <h3 className={`text-sm font-bold text-center leading-tight min-h-[32px] flex items-center px-1 transition-colors ${
-            isSelected ? 'text-[var(--gold)]' : 'text-[var(--text-primary)] group-hover:text-[var(--gold)]'
+            isDisabled ? 'text-[var(--text-tertiary)]' : isSelected ? 'text-[var(--gold)]' : 'text-[var(--text-primary)] group-hover:text-[var(--gold)]'
           }`}>
             {region.name}
           </h3>
@@ -230,14 +235,14 @@ export default function RelicSelectionModal({
     <dialog
       ref={dialogRef}
       onClick={handleBackdropClick}
-      className="backdrop:bg-black/80 backdrop:backdrop-blur-sm bg-[var(--bg-base)] border-2 border-[var(--border-strong)] rounded-2xl shadow-2xl p-0 max-w-7xl w-[92vw] max-h-[88vh] overflow-hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0"
+      className="backdrop:bg-black/80 backdrop:backdrop-blur-sm bg-[var(--bg-base)] border-2 border-[var(--border-strong)] rounded-2xl shadow-2xl p-0 max-w-3xl w-[85vw] max-h-[80vh] overflow-hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0"
       onClose={onClose}
     >
       <div className="flex flex-col h-full">
         {/* Enhanced Header */}
         <div className="relative flex items-center justify-between px-6 py-5 border-b-2 border-[var(--border-strong)] bg-gradient-to-r from-[var(--bg-elevated)] to-[var(--bg-surface)]">
           <div>
-            <h2 className="text-xl font-bold text-[var(--gold)] tracking-wide">
+            <h2 className="text-xl font-bold text-[var(--crimson)] tracking-wide">
               {title}
             </h2>
             <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
@@ -260,21 +265,15 @@ export default function RelicSelectionModal({
               {Object.entries(groupedOptions)
                 .sort(([a], [b]) => Number(a) - Number(b))
                 .map(([tier, relics]) => {
-                  const tierConfig = getTierConfig(Number(tier));
                   return (
                     <div key={tier}>
-                      {/* Tier header */}
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r ${tierConfig.color} text-white font-bold text-sm shadow-lg`}>
-                          {/* @ts-ignore */}
-                          <tierConfig.icon size={16} />
-                          <span>{tierConfig.label}</span>
-                        </div>
-                        <div className="flex-1 h-[2px] bg-gradient-to-r from-[var(--border-strong)] to-transparent" />
-                      </div>
+                      {/* Tier label */}
+                      <h3 className="text-sm font-bold text-[var(--text-secondary)] mb-3">
+                        Tier {toRomanNumeral(Number(tier))}
+                      </h3>
 
                       {/* Tier relics grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
                         {relics.map(renderRelicCard)}
                       </div>
                     </div>
@@ -283,7 +282,7 @@ export default function RelicSelectionModal({
             </div>
           ) : (
             // Regions simple grid
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
               {options.map((opt) => renderRegionCard(opt as OfficialRegion))}
             </div>
           )}

@@ -111,6 +111,7 @@ const MilestoneRow = memo(function MilestoneRow({
           <button
             onClick={() => setModalOpen(true)}
             disabled={!isAdmin}
+            aria-label={`Select ${isRelic ? 'relic' : 'region'} for ${milestone.label}`}
             className="flex items-center gap-1.5 bg-[var(--bg-surface)] border border-[var(--border-standard)] rounded-md px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:border-[var(--gold)] focus:outline-none focus:border-[var(--gold)]"
           >
             <span className={selectedItem ? 'text-[var(--gold)]' : 'text-[var(--text-tertiary)]'}>

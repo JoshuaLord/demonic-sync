@@ -14,6 +14,9 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     viewport: { width: 1920, height: 1080 }, // Larger viewport
+    extraHTTPHeaders: {
+      'Origin': 'http://localhost:3000', // Required for CSRF check
+    },
   },
 
   projects: [

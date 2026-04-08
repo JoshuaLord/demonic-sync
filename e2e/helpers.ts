@@ -10,6 +10,28 @@ export async function suppressTour(page: Page) {
 }
 
 /**
+ * Wait for admin authentication to complete after navigating with ?key=.
+ * Checks for the presence of the non-HttpOnly companion cookie (dsa_<roomId>)
+ * which indicates the auth exchange succeeded.
+ */
+export async function waitForAdminAuth(page: Page, roomId: string, timeout = 5000) {
+  const cookieName = `dsa_${roomId}`;
+  const deadline = Date.now() + timeout;
+
+  while (Date.now() < deadline) {
+    const cookies = await page.context().cookies();
+    if (cookies.some(c => c.name === cookieName && c.value === '1')) {
+      // Give the React state update a moment to propagate
+      await page.waitForTimeout(200);
+      return;
+    }
+    await page.waitForTimeout(100);
+  }
+
+  throw new Error(`Admin auth did not complete within ${timeout}ms`);
+}
+
+/**
  * Create a new room and navigate to it as admin
  * Returns the room ID
  */
@@ -32,8 +54,8 @@ export async function createRoom(page: Page): Promise<string> {
   await page.waitForSelector('[data-tour="task-library"]', { timeout: 10000 });
   await page.waitForSelector('[data-tour="task-library"] input[placeholder*="Search"]', { timeout: 10000 });
 
-  // Give realtime subscription time to fully initialize
-  await page.waitForTimeout(1000);
+  // Wait for admin auth to complete (cookie is set by /api/rooms/create response)
+  await waitForAdminAuth(page, roomId);
 
   return roomId;
 }

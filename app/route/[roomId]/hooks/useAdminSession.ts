@@ -10,10 +10,13 @@ type SessionStatus = {
 
 export function useAdminSession(
   roomId: string,
-  isAdmin: boolean,
-  adminKey: string | null
+  isAdmin: boolean
 ) {
-  const sessionIdRef = useRef<string>('');
+  // Eagerly initialize sessionId so it's available on the first render
+  const [sessionId] = useState(() =>
+    Math.random().toString(36).substring(2) + Date.now().toString(36)
+  );
+  const sessionIdRef = useRef(sessionId);
   const [status, setStatus] = useState<SessionStatus>({
     queuePosition: 0,
     totalAdmins: 0,
@@ -22,20 +25,14 @@ export function useAdminSession(
   // Custom JWT signed by server for Realtime RLS authorization
   const [realtimeToken, setRealtimeToken] = useState<string | null>(null);
 
-  // Generate session ID once on mount
-  useEffect(() => {
-    sessionIdRef.current =
-      Math.random().toString(36).substring(2) + Date.now().toString(36);
-  }, []);
-
   const registerSession = useCallback(async () => {
-    if (!isAdmin || !adminKey) return;
+    if (!isAdmin) return;
 
     const response = await fetch(`/api/rooms/${roomId}/realtime-session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify({
-        adminKey,
         sessionId: sessionIdRef.current,
       }),
     });
@@ -51,7 +48,7 @@ export function useAdminSession(
         setRealtimeToken(data.token);
       }
     }
-  }, [roomId, isAdmin, adminKey]);
+  }, [roomId, isAdmin]);
 
   const heartbeat = useCallback(async () => {
     if (!isAdmin) return;
@@ -59,6 +56,7 @@ export function useAdminSession(
     const response = await fetch(`/api/rooms/${roomId}/realtime-session`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify({ sessionId: sessionIdRef.current }),
     });
 
@@ -82,6 +80,7 @@ export function useAdminSession(
     await fetch(`/api/rooms/${roomId}/realtime-session`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify({ sessionId: sessionIdRef.current }),
     });
   }, [roomId, isAdmin]);
@@ -103,7 +102,7 @@ export function useAdminSession(
   }, [isAdmin, registerSession, heartbeat, unregisterSession]);
 
   return {
-    sessionId: sessionIdRef.current,
+    sessionId,
     realtimeToken,
     ...status,
   };

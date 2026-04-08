@@ -1,10 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { validateAdmin } from '@/lib/validate-admin';
+import { requireAdminAuth } from '@/lib/auth';
 import { signRealtimeJwt } from '@/lib/jwt';
 
-// Helper: get queue status for a room
+const SESSION_ID_RE = /^[a-z0-9]+$/i;
+
+function validSessionId(sessionId: unknown): sessionId is string {
+  return typeof sessionId === 'string' && sessionId.length > 0 && sessionId.length <= 64 && SESSION_ID_RE.test(sessionId);
+}
+
 async function getQueueStatus(roomId: string, sessionId: string) {
   const { data: sessions } = await supabaseAdmin
     .from('realtime_admin_sessions')
@@ -23,24 +28,28 @@ async function getQueueStatus(roomId: string, sessionId: string) {
   };
 }
 
-// POST - Register admin session
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ roomId: string }> }
 ) {
   const { roomId } = await params;
-  const { adminKey, sessionId } = await request.json();
+  const auth = await requireAdminAuth(request, roomId);
+  if (!auth.ok) return auth.response;
 
-  // Validate admin key
-  const auth = await validateAdmin(roomId, adminKey);
-  if (!auth.valid) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  let body: { sessionId?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  // Hash admin key for privacy (don't store plaintext in sessions table)
-  const keyHash = createHash('sha256').update(adminKey).digest('hex');
+  const { sessionId } = body;
+  if (!validSessionId(sessionId)) {
+    return NextResponse.json({ error: 'Invalid session ID' }, { status: 400 });
+  }
 
-  // Upsert session (handles reconnects gracefully)
+  const keyHash = createHash('sha256').update(auth.adminKey).digest('hex');
+
   const { error } = await supabaseAdmin
     .from('realtime_admin_sessions')
     .upsert({
@@ -59,21 +68,30 @@ export async function POST(
     return NextResponse.json({ error: 'Failed to register' }, { status: 500 });
   }
 
-  // Sign a custom JWT with this session_id for Realtime RLS
   const token = await signRealtimeJwt(sessionId);
-
   const status = await getQueueStatus(roomId, sessionId);
-
   return NextResponse.json({ ok: true, token, ...status });
 }
 
-// PATCH - Heartbeat update
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ roomId: string }> }
 ) {
   const { roomId } = await params;
-  const { sessionId } = await request.json();
+  const auth = await requireAdminAuth(request, roomId);
+  if (!auth.ok) return auth.response;
+
+  let body: { sessionId?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  const { sessionId } = body;
+  if (!validSessionId(sessionId)) {
+    return NextResponse.json({ error: 'Invalid session ID' }, { status: 400 });
+  }
 
   const { error } = await supabaseAdmin
     .from('realtime_admin_sessions')
@@ -85,21 +103,30 @@ export async function PATCH(
     return NextResponse.json({ error: 'Heartbeat failed' }, { status: 500 });
   }
 
-  // Re-sign JWT on each heartbeat (keeps expiration fresh)
   const token = await signRealtimeJwt(sessionId);
-
   const status = await getQueueStatus(roomId, sessionId);
-
   return NextResponse.json({ ok: true, token, ...status });
 }
 
-// DELETE - Unregister session
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ roomId: string }> }
 ) {
   const { roomId } = await params;
-  const { sessionId } = await request.json();
+  const auth = await requireAdminAuth(request, roomId);
+  if (!auth.ok) return auth.response;
+
+  let body: { sessionId?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  const { sessionId } = body;
+  if (!validSessionId(sessionId)) {
+    return NextResponse.json({ error: 'Invalid session ID' }, { status: 400 });
+  }
 
   await supabaseAdmin
     .from('realtime_admin_sessions')

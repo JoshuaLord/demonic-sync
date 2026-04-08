@@ -1,6 +1,12 @@
 import crypto from 'crypto';
 import { supabaseAdmin } from './supabase-admin';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isValidUUID(id: string): boolean {
+  return UUID_RE.test(id);
+}
+
 export async function validateAdmin(
   roomId: string,
   adminKey: string | null | undefined
@@ -24,14 +30,12 @@ export async function validateAdmin(
     return { valid: false, error: 'Room has no admin key' };
   }
 
-  // Constant-time comparison to prevent timing attacks
-  const a = Buffer.from(adminKey, 'utf-8');
-  const b = Buffer.from(storedKey, 'utf-8');
-
-  if (a.length !== b.length) {
-    return { valid: false, error: 'Invalid admin key' };
-  }
-
+  // Hash both keys to fixed-length buffers before comparison.
+  // This prevents leaking length information through timingSafeEqual's
+  // requirement for equal-length buffers.
+  const a = crypto.createHash('sha256').update(adminKey).digest();
+  const b = crypto.createHash('sha256').update(storedKey).digest();
   const match = crypto.timingSafeEqual(a, b);
+
   return match ? { valid: true } : { valid: false, error: 'Invalid admin key' };
 }

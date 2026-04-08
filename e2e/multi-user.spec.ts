@@ -5,6 +5,7 @@ import {
   waitForTaskCount,
   getVisibleRouteItem,
   waitForEmptyState,
+  waitForAdminAuth,
 } from './helpers';
 
 const BASE_URL = 'http://localhost:3000';
@@ -17,22 +18,29 @@ async function createUser(browser: Browser): Promise<{ context: BrowserContext; 
   return { context, page };
 }
 
-// Helper: Create a room as admin and return roomId + adminKey
+// Helper: Create a room as admin and return roomId.
+// Admin auth is now held in an HttpOnly cookie scoped to this browser
+// context — there is no longer an admin key in the URL.
 async function createRoomMultiUser(page: Page): Promise<{ roomId: string; adminKey: string }> {
   await page.goto(BASE_URL);
   const createButton = page.locator('button', { hasText: /create/i });
   await createButton.click();
   await page.waitForURL(/\/route\//, { timeout: 10000 });
 
-  // Extract roomId and adminKey from the URL before the client strips it
   const url = page.url();
   const roomId = url.match(/\/route\/([^?]+)/)?.[1] || '';
-  const adminKey = url.match(/[?&]key=([^&]+)/)?.[1] || '';
 
+  // Wait for the page to load AND for admin auth to complete
   await page.waitForSelector('[data-tour="task-library"]', { timeout: 10000 });
+  await waitForAdminAuth(page, roomId);
 
-  // Give realtime subscription time to fully initialize
-  await page.waitForTimeout(1000);
+  // Fetch the admin key from the new endpoint
+  const adminKey = await page.evaluate(async (id) => {
+    const r = await fetch(`/api/rooms/${id}/admin-key`, { credentials: 'same-origin' });
+    if (!r.ok) throw new Error(`Failed to fetch admin key: ${r.status}`);
+    const j = await r.json();
+    return j.adminKey as string;
+  }, roomId);
 
   return { roomId, adminKey };
 }
@@ -118,6 +126,7 @@ test.describe('Multi-User: Two admins editing simultaneously', () => {
     const admin2 = await createUser(browser);
     await admin2.page.goto(`${BASE_URL}/route/${roomId}?key=${adminKey}`);
     await admin2.page.waitForSelector('[data-tour="task-library"]', { timeout: 10000 });
+    await waitForAdminAuth(admin2.page, roomId);
 
     // Admin 1 adds a task
     const addButton1 = admin1.page.locator('[data-tour="task-library"] button[title="Add to route"]').first();
@@ -160,6 +169,7 @@ test.describe('Multi-User: Two admins editing simultaneously', () => {
     const admin2 = await createUser(browser);
     await admin2.page.goto(`${BASE_URL}/route/${roomId}?key=${adminKey}`);
     await admin2.page.waitForSelector('[data-tour="route-area"]', { timeout: 10000 });
+    await waitForAdminAuth(admin2.page, roomId);
     await waitForTaskCount(admin2.page, 3);
 
     const beforeNames = await getRouteTaskNames(admin2.page);
@@ -257,6 +267,7 @@ test.describe('Multi-User: Simultaneous actions', () => {
     const admin2 = await createUser(browser);
     await admin2.page.goto(`${BASE_URL}/route/${roomId}?key=${adminKey}`);
     await admin2.page.waitForSelector('[data-tour="task-library"] button[title="Add to route"]', { timeout: 10000 });
+    await waitForAdminAuth(admin2.page, roomId);
 
     // Also wait for admin1's library
     await admin1.page.waitForSelector('[data-tour="task-library"] button[title="Add to route"]', { timeout: 10000 });
@@ -299,6 +310,7 @@ test.describe('Multi-User: Simultaneous actions', () => {
     const admin2 = await createUser(browser);
     await admin2.page.goto(`${BASE_URL}/route/${roomId}?key=${adminKey}`);
     await admin2.page.waitForSelector('[data-tour="route-area"]', { timeout: 10000 });
+    await waitForAdminAuth(admin2.page, roomId);
     await waitForTaskCount(admin2.page, 2);
 
     // Admin1 deletes the first task while Admin2 adds a new one

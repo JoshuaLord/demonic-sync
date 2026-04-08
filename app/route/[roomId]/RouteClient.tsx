@@ -2,7 +2,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { SafeRoom, RouteStep, OfficialRelic, OfficialRegion, MilestoneSelections } from '@/types';
-import { apiRoomUpdate, apiStepInsert, apiStepUpdate, apiStepDelete } from '@/lib/api';
+import { apiRoomUpdate, apiStepInsert, apiStepUpdate, apiStepDelete, apiAuthenticate, apiFetchAdminKey } from '@/lib/api';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { GripVertical, GripHorizontal, X, BookOpen, Trophy } from 'lucide-react';
 import TaskLibrary from './TaskLibrary';
@@ -44,6 +44,14 @@ import Tooltip from './components/Tooltip';
 import { usePresence } from './hooks/usePresence';
 
 type PlayerNames = Record<string, string>;
+
+interface DragTaskData {
+  id: number | string;
+  name: string;
+  tier?: string | null;
+  points?: number | null;
+  region?: string | null;
+}
 
 export default function RouteClient({
   room,
@@ -92,10 +100,9 @@ export default function RouteClient({
 
   // DnD state - inline preview injection
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [activeDragData, setActiveDragData] = useState<any>(null);
+  const [activeDragData, setActiveDragData] = useState<DragTaskData | null>(null);
   const [previewStep, setPreviewStep] = useState<RouteStep | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-  const [isOverRouteArea, setIsOverRouteArea] = useState(false);
   const [draggedRouteStep, setDraggedRouteStep] = useState<RouteStep | null>(null);
   const [draggedFromIndex, setDraggedFromIndex] = useState<number | null>(null);
 
@@ -112,34 +119,42 @@ export default function RouteClient({
   );
 
   // ──────────────────────────────────────────────
-  // Helper to get admin key from localStorage
+  // Presence (live cursors) - admin-only.
+  // Authentication is via the HttpOnly cookie set during sign-in;
+  // the hook never sees the raw admin key.
   // ──────────────────────────────────────────────
-  const getAdminKey = (roomId: string): string | null => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem(`admin_key_${roomId}`);
-  };
-
-  // ──────────────────────────────────────────────
-  // Presence (live cursors) - admin-only
-  // ──────────────────────────────────────────────
-  const presence = usePresence(room.id, isAdmin, getAdminKey(room.id));
+  const presence = usePresence(room.id, isAdmin);
   const { others: presenceOthers, color: presenceColor, name: presenceName, setName: setPresenceName } = presence;
 
   // ──────────────────────────────────────────────
   // Init & localStorage
   // ──────────────────────────────────────────────
   useEffect(() => {
+    const presenceCookie = `dsa_${room.id}=1`;
+    const hasAdminCookie = typeof document !== 'undefined' &&
+      document.cookie.split('; ').some(c => c === presenceCookie);
+
     const urlParams = new URLSearchParams(window.location.search);
     const keyFromUrl = urlParams.get('key');
 
     if (keyFromUrl) {
-      localStorage.setItem(`admin_key_${room.id}`, keyFromUrl);
-      window.history.replaceState({}, '', `/route/${room.id}`);
-      setIsAdmin(true);
+      // Exchange the share-link key for an HttpOnly cookie session,
+      // then strip it from the URL so it never lingers in history.
+      apiAuthenticate(room.id, keyFromUrl)
+        .then(() => setIsAdmin(true))
+        .catch(() => setIsAdmin(false))
+        .finally(() => {
+          window.history.replaceState({}, '', `/route/${room.id}`);
+        });
     } else {
-      const storedKey = localStorage.getItem(`admin_key_${room.id}`);
-      setIsAdmin(!!storedKey);
+      setIsAdmin(hasAdminCookie);
     }
+
+    // One-time cleanup: remove any legacy admin key left in localStorage
+    // from prior versions of the app.
+    try {
+      localStorage.removeItem(`admin_key_${room.id}`);
+    } catch { /* ignore */ }
 
     const storedCollapsed = localStorage.getItem('library_collapsed');
     if (storedCollapsed !== null) setIsLibraryCollapsed(storedCollapsed === 'true');
@@ -461,20 +476,29 @@ export default function RouteClient({
   // ──────────────────────────────────────────────
   // Share links
   // ──────────────────────────────────────────────
-  function copyAdminLink() {
-    const adminKey = localStorage.getItem(`admin_key_${room.id}`);
-    if (!adminKey) { alert('Admin key not found'); return; }
-    const adminUrl = `${window.location.origin}/route/${room.id}?key=${adminKey}`;
-    navigator.clipboard.writeText(adminUrl);
-    setCopiedLink('admin');
-    setTimeout(() => setCopiedLink(null), 2000);
+  async function copyAdminLink() {
+    try {
+      // Admin key is fetched on demand from a cookie-authenticated endpoint;
+      // it is no longer persisted in JS-accessible storage.
+      const adminKey = await apiFetchAdminKey(room.id);
+      const adminUrl = `${window.location.origin}/route/${room.id}?key=${adminKey}`;
+      await navigator.clipboard.writeText(adminUrl);
+      setCopiedLink('admin');
+      setTimeout(() => setCopiedLink(null), 2000);
+    } catch {
+      alert('Failed to copy to clipboard. Please try again.');
+    }
   }
 
-  function copyViewOnlyLink() {
+  async function copyViewOnlyLink() {
     const viewUrl = `${window.location.origin}/route/${room.id}`;
-    navigator.clipboard.writeText(viewUrl);
-    setCopiedLink('view');
-    setTimeout(() => setCopiedLink(null), 2000);
+    try {
+      await navigator.clipboard.writeText(viewUrl);
+      setCopiedLink('view');
+      setTimeout(() => setCopiedLink(null), 2000);
+    } catch {
+      alert('Failed to copy to clipboard. Please copy the URL manually.');
+    }
   }
 
   // ──────────────────────────────────────────────
@@ -572,7 +596,7 @@ export default function RouteClient({
 
     if (id.startsWith('library-')) {
       // Store the library task data for the overlay
-      const task = event.active.data.current as any;
+      const task = event.active.data.current as DragTaskData | undefined;
       if (task) {
         setActiveDragData({
           id: task.id,
@@ -589,10 +613,10 @@ export default function RouteClient({
       if (step) {
         setActiveDragData({
           id: step.task_id || step.id,
-          name: (step as any).task_name || step.custom_text || 'Task',
-          tier: (step as any).task_tier,
-          points: (step as any).task_points,
-          region: (step as any).task_region,
+          name: step.task_name || step.custom_text || 'Task',
+          tier: step.task_tier,
+          points: step.task_points,
+          region: step.task_region,
         });
 
         // Remove from steps and store for recovery
@@ -615,7 +639,6 @@ export default function RouteClient({
     if (!over) {
       setPreviewStep(null);
       setPreviewIndex(null);
-      setIsOverRouteArea(false);
       return;
     }
 
@@ -624,7 +647,7 @@ export default function RouteClient({
 
     if (activeIdStr.startsWith('library-')) {
       // Library → Route: inject preview step at target position
-      const task = active.data.current as any;
+      const task = active.data.current as DragTaskData & { description?: string | null } | undefined;
       if (!task) return;
 
       let newIndex: number;
@@ -636,7 +659,6 @@ export default function RouteClient({
         const overStep = steps.findIndex(s => s.id === overIdStr);
         if (overStep < 0) {
           // Over item might be the preview itself - keep current index
-          setIsOverRouteArea(true);
           return;
         }
 
@@ -653,11 +675,9 @@ export default function RouteClient({
 
       // Skip update if index hasn't changed
       if (newIndex === previewIndex && previewStep !== null) {
-        setIsOverRouteArea(true);
         return;
       }
 
-      setIsOverRouteArea(true);
       setPreviewIndex(newIndex);
 
       // Create preview RouteStep (only if we don't have one yet, or task changed)
@@ -667,12 +687,12 @@ export default function RouteClient({
           room_id: room.id,
           step_order: -1,
           step_type: 'task',
-          task_id: task.id,
+          task_id: task.id as number,
           task_name: task.name,
           task_description: task.description || null,
-          task_tier: task.tier,
-          task_points: task.points,
-          task_region: task.region,
+          task_tier: task.tier || null,
+          task_points: task.points || null,
+          task_region: task.region || null,
           custom_text: null,
           player_state: {},
           created_at: new Date().toISOString(),
@@ -690,8 +710,7 @@ export default function RouteClient({
         const overStep = steps.findIndex(s => s.id === overIdStr);
         if (overStep < 0) {
           // Over the preview itself - keep current index
-          setIsOverRouteArea(true);
-          return;
+              return;
         }
 
         // Direction-aware placement
@@ -703,11 +722,9 @@ export default function RouteClient({
       }
 
       if (newIndex === previewIndex && previewStep !== null) {
-        setIsOverRouteArea(true);
-        return;
+          return;
       }
 
-      setIsOverRouteArea(true);
       setPreviewIndex(newIndex);
     }
   }
@@ -724,13 +741,12 @@ export default function RouteClient({
     setActiveDragData(null);
     setPreviewStep(null);
     setPreviewIndex(null);
-    setIsOverRouteArea(false);
 
     if (activeIdStr.startsWith('library-')) {
       // Library → Route: insert task at drop position
       if (!over && finalDropIndex === null) return; // Dropped outside with no preview - do nothing
 
-      const task = active.data.current as any;
+      const task = active.data.current as DragTaskData & { description?: string | null } | undefined;
       if (!task) return;
 
       // Use the preview position the user saw, fall back to end of list
@@ -833,7 +849,6 @@ export default function RouteClient({
     setActiveDragData(null);
     setPreviewStep(null);
     setPreviewIndex(null);
-    setIsOverRouteArea(false);
     setDraggedRouteStep(null);
     setDraggedFromIndex(null);
   }

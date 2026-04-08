@@ -14,16 +14,17 @@ export default function Home() {
 
       const response = await fetch('/api/rooms/create', {
         method: 'POST',
+        credentials: 'same-origin',
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const { roomId, adminKey } = await response.json();
-
-      // Redirect to room with admin key
-      router.push(`/route/${roomId}?key=${adminKey}`);
+      // The server set an HttpOnly admin cookie on this response;
+      // no need to put the admin key in the URL anymore.
+      const { roomId } = await response.json();
+      router.push(`/route/${roomId}`);
     } catch (error) {
       console.error('Error creating room:', error);
       alert('Failed to create room. Please check the console for details.');

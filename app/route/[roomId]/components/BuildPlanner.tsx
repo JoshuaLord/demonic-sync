@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, Trophy, Map, Sparkles, Flame, Crown, Skull } from 'lucide-react';
+import { Trophy, Map } from 'lucide-react';
 import { RELIC_TIERS, AREA_UNLOCKS } from '@/lib/milestones';
 import { OfficialRelic, OfficialRegion, MilestoneSelections } from '@/types';
+import { toRomanNumeral } from '@/lib/format-utils';
 import RelicSelectionModal from './RelicSelectionModal';
 
 interface BuildPlannerProps {
@@ -16,35 +17,15 @@ interface BuildPlannerProps {
   position?: 'sidebar' | 'bottom';
 }
 
-// Tier-specific icons matching RelicSelectionModal
-const getTierIcon = (tier: number) => {
-  switch (tier) {
-    case 1: return Sparkles;
-    case 2:
-    case 3: return Flame;
-    case 4:
-    case 5: return Crown;
-    case 6:
-    case 7: return Skull;
-    case 8: return Crown;
-    default: return Sparkles;
-  }
+// Convert name to image filename (matches scraper output)
+const nameToFilename = (name: string) => {
+  return name
+    .toLowerCase()
+    .replace(/[']/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 };
 
-// Tier-specific colors matching RelicSelectionModal
-const getTierColor = (tier: number): string => {
-  switch (tier) {
-    case 1: return 'from-gray-600 to-gray-700';
-    case 2: return 'from-green-600 to-green-700';
-    case 3: return 'from-blue-600 to-blue-700';
-    case 4: return 'from-purple-600 to-purple-700';
-    case 5: return 'from-orange-600 to-orange-700';
-    case 6: return 'from-red-600 to-red-700';
-    case 7: return 'from-pink-600 to-pink-700';
-    case 8: return 'from-yellow-500 to-amber-600';
-    default: return 'from-gray-600 to-gray-700';
-  }
-};
 
 export default function BuildPlanner({
   relics,
@@ -91,6 +72,17 @@ export default function BuildPlanner({
   const modalOptions = getModalOptions();
   const modalSelectedId = selectedMilestone ? milestoneSelections[selectedMilestone.id] || null : null;
 
+  // For regions, collect IDs already selected in OTHER area unlock slots
+  const getDisabledIds = (): number[] => {
+    if (!selectedMilestone || selectedMilestone.isRelic) return [];
+    return AREA_UNLOCKS
+      .map(a => `area_u${a.tier}`)
+      .filter(id => id !== selectedMilestone.id)
+      .map(id => milestoneSelections[id])
+      .filter((id): id is number => id != null);
+  };
+  const modalDisabledIds = getDisabledIds();
+
   return (
     <div className="h-full flex flex-col bg-[var(--bg-base)]">
       {/* Header */}
@@ -115,8 +107,7 @@ export default function BuildPlanner({
               const milestoneId = `relic_t${tier.tier}`;
               const selectedId = milestoneSelections[milestoneId] || null;
               const selectedRelic = selectedId ? relics.find(r => r.id === selectedId) : null;
-              const TierIcon = getTierIcon(tier.tier);
-              const tierColor = getTierColor(tier.tier);
+              const isSelected = !!selectedRelic;
 
               return (
                 <button
@@ -128,21 +119,35 @@ export default function BuildPlanner({
                       ? 'hover:border-[var(--gold)] hover:shadow-md hover:scale-[1.02] cursor-pointer'
                       : 'opacity-60 cursor-not-allowed'
                   } ${
-                    selectedRelic
-                      ? 'border-[var(--gold)]/50 bg-gradient-to-r from-[var(--gold)]/10 to-transparent'
+                    isSelected
+                      ? 'border-[var(--gold)]/50 bg-[var(--gold)]/10'
                       : 'border-[var(--border-standard)] bg-[var(--bg-surface)]'
                   }`}
                 >
-                  {/* Tier Badge */}
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-md bg-gradient-to-br ${tierColor} flex items-center justify-center shadow-sm`}>
-                    <TierIcon size={16} className="text-white" />
-                  </div>
+                  {/* Relic icon - pentagon placeholder when empty, relic image when selected */}
+                  {selectedRelic ? (
+                    <img
+                      src={`/images/relics/${nameToFilename(selectedRelic.name)}.png`}
+                      alt={selectedRelic.name}
+                      className="flex-shrink-0 w-10 h-10 object-contain"
+                    />
+                  ) : (
+                    <svg className="flex-shrink-0 w-10 h-10" viewBox="0 0 40 40" fill="none">
+                      <polygon
+                        points="20,2 38,14 31,36 9,36 2,14"
+                        stroke="var(--border-strong)"
+                        strokeWidth="1.5"
+                        strokeDasharray="4 3"
+                        fill="none"
+                      />
+                    </svg>
+                  )}
 
                   {/* Info */}
                   <div className="flex-1 min-w-0 text-left">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-[var(--text-primary)]">
-                        {tier.label}
+                        Relic Tier {toRomanNumeral(tier.tier)}
                       </span>
                       <span className="text-xs text-[var(--text-tertiary)] font-mono">
                         {tier.threshold} pts
@@ -157,10 +162,6 @@ export default function BuildPlanner({
                     </div>
                   </div>
 
-                  {/* Status Indicator */}
-                  <div className={`flex-shrink-0 w-2 h-2 rounded-full ${
-                    selectedRelic ? 'bg-[var(--gold)]' : 'bg-[var(--border-standard)]'
-                  }`} />
                 </button>
               );
             })}
@@ -180,6 +181,7 @@ export default function BuildPlanner({
               const milestoneId = `area_u${area.tier}`;
               const selectedId = milestoneSelections[milestoneId] || null;
               const selectedRegion = selectedId ? regions.find(r => r.id === selectedId) : null;
+              const isSelected = !!selectedRegion;
 
               return (
                 <button
@@ -191,15 +193,21 @@ export default function BuildPlanner({
                       ? 'hover:border-[var(--gold)] hover:shadow-md hover:scale-[1.02] cursor-pointer'
                       : 'opacity-60 cursor-not-allowed'
                   } ${
-                    selectedRegion
-                      ? 'border-[var(--gold)]/50 bg-gradient-to-r from-[var(--gold)]/10 to-transparent'
+                    isSelected
+                      ? 'border-[var(--gold)]/50 bg-[var(--gold)]/10'
                       : 'border-[var(--border-standard)] bg-[var(--bg-surface)]'
                   }`}
                 >
-                  {/* Map Icon */}
-                  <div className="flex-shrink-0 w-8 h-8 rounded-md bg-gradient-to-br from-[var(--crimson)]/30 to-[var(--crimson)]/10 flex items-center justify-center border border-[var(--border-standard)]">
-                    <Map size={16} className="text-[var(--crimson)]" />
-                  </div>
+                  {/* Region icon - rounded square placeholder when empty, region image when selected */}
+                  {selectedRegion ? (
+                    <img
+                      src={`/images/regions/${nameToFilename(selectedRegion.name)}.png`}
+                      alt={selectedRegion.name}
+                      className="flex-shrink-0 w-10 h-10 object-contain"
+                    />
+                  ) : (
+                    <div className="flex-shrink-0 w-10 h-10 rounded-lg border-2 border-dashed border-[var(--border-strong)]" />
+                  )}
 
                   {/* Info */}
                   <div className="flex-1 min-w-0 text-left">
@@ -219,11 +227,6 @@ export default function BuildPlanner({
                       )}
                     </div>
                   </div>
-
-                  {/* Status Indicator */}
-                  <div className={`flex-shrink-0 w-2 h-2 rounded-full ${
-                    selectedRegion ? 'bg-[var(--gold)]' : 'bg-[var(--border-standard)]'
-                  }`} />
                 </button>
               );
             })}
@@ -240,9 +243,10 @@ export default function BuildPlanner({
           selectedId={modalSelectedId}
           onSelect={handleSelect}
           isRelic={selectedMilestone.isRelic}
+          disabledIds={modalDisabledIds}
           title={
             selectedMilestone.isRelic
-              ? `Select Relic - ${selectedMilestone.label}`
+              ? `Select Relic - Tier ${toRomanNumeral(selectedMilestone.tier)}`
               : `Select Region - ${selectedMilestone.label}`
           }
         />

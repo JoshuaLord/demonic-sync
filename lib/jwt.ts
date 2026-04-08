@@ -1,8 +1,11 @@
 import { SignJWT } from 'jose';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.SUPABASE_JWT_SECRET!
-);
+const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+if (!jwtSecret) {
+  throw new Error('Missing SUPABASE_JWT_SECRET environment variable');
+}
+
+const JWT_SECRET = new TextEncoder().encode(jwtSecret);
 
 /**
  * Sign a custom JWT for Supabase Realtime authorization.

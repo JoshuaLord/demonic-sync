@@ -117,34 +117,34 @@ const SortableTaskItem = memo(function SortableTaskItem({
           <div className="text-sm truncate text-[var(--text-primary)] font-medium italic">{step.custom_text}</div>
         ) : (
           <>
-            {(step as any).task_tier && (
+            {step.task_tier && (
               <>
                 <span
                   className={`w-14 px-1.5 py-0.5 rounded text-xs font-bold flex-shrink-0 text-center ${
-                    (step as any).task_tier === 'Easy'
+                    step.task_tier === 'Easy'
                       ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                      : (step as any).task_tier === 'Medium'
+                      : step.task_tier === 'Medium'
                       ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                      : (step as any).task_tier === 'Hard'
+                      : step.task_tier === 'Hard'
                       ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
-                      : (step as any).task_tier === 'Elite'
+                      : step.task_tier === 'Elite'
                       ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
                       : 'bg-red-500/10 text-red-600 dark:text-red-400'
                   }`}
                 >
-                  {(step as any).task_tier}
+                  {step.task_tier}
                 </span>
                 <span className="w-10 text-xs text-[var(--gold)] font-mono font-bold flex-shrink-0 pl-2">
-                  {(step as any).task_points}
+                  {step.task_points}
                 </span>
               </>
             )}
             <div className="text-sm font-medium truncate text-[var(--text-primary)]">
-              {(step as any).task_name || `Task #${step.task_id}`}
+              {step.task_name || `Task #${step.task_id}`}
             </div>
-            {(step as any).task_region && (
+            {step.task_region && (
               <span className="text-xs text-[var(--text-tertiary)] flex-shrink-0">
-                {(step as any).task_region}
+                {step.task_region}
               </span>
             )}
           </>
@@ -174,6 +174,7 @@ const SortableTaskItem = memo(function SortableTaskItem({
                   checked={state === true}
                   onChange={() => handleCheckboxToggle(step.id, playerId)}
                   disabled={!isAdmin}
+                  aria-label={`Toggle ${playerNames[playerId] || playerId} completion`}
                   className={`${
                     isBouncing ? 'animate-checkbox-bounce' : ''
                   } ${
@@ -203,6 +204,7 @@ const SortableTaskItem = memo(function SortableTaskItem({
               : 'bg-[var(--bg-surface)] hover:bg-[var(--crimson)] border border-[var(--border-standard)]'
           }`}
           title={deleteClickedId === step.id ? 'Click again to confirm' : 'Delete'}
+          aria-label={deleteClickedId === step.id ? 'Confirm delete task' : 'Delete task'}
         >
           <Trash2 size={10} className={deleteClickedId === step.id ? 'text-white' : 'text-[var(--text-tertiary)]'} />
         </button>

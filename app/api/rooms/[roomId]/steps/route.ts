@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { validateAdmin } from '@/lib/validate-admin';
+import { requireAdminAuth } from '@/lib/auth';
+
+const VALID_STEP_TYPES = new Set(['task', 'custom']);
 
 export async function POST(
   request: NextRequest,
@@ -8,32 +10,44 @@ export async function POST(
 ) {
   const { roomId } = await params;
 
-  let body: any;
+  const auth = await requireAdminAuth(request, roomId);
+  if (!auth.ok) return auth.response;
+
+  let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { adminKey, stepData } = body;
-
-  const auth = await validateAdmin(roomId, adminKey);
-  if (!auth.valid) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-  }
-
+  const stepData = body.stepData as Record<string, unknown> | undefined;
   if (!stepData || typeof stepData !== 'object') {
     return NextResponse.json({ error: 'Invalid step data' }, { status: 400 });
   }
 
+  if (!VALID_STEP_TYPES.has(stepData.step_type as string)) {
+    return NextResponse.json({ error: 'Invalid step_type' }, { status: 400 });
+  }
+
+  if (stepData.task_name && (typeof stepData.task_name !== 'string' || (stepData.task_name as string).length > 500)) {
+    return NextResponse.json({ error: 'task_name too long (max 500)' }, { status: 400 });
+  }
+  if (stepData.task_description && (typeof stepData.task_description !== 'string' || (stepData.task_description as string).length > 2000)) {
+    return NextResponse.json({ error: 'task_description too long (max 2000)' }, { status: 400 });
+  }
+  if (stepData.custom_text && (typeof stepData.custom_text !== 'string' || (stepData.custom_text as string).length > 500)) {
+    return NextResponse.json({ error: 'custom_text too long (max 500)' }, { status: 400 });
+  }
+
+  if (stepData.task_points !== undefined && stepData.task_points !== null && typeof stepData.task_points !== 'number') {
+    return NextResponse.json({ error: 'task_points must be a number or null' }, { status: 400 });
+  }
+
   // Server-side step_order calculation with retry logic to handle race conditions
-  // When two admins add simultaneously, one might get a unique constraint violation
-  // We retry up to 3 times with recalculated order
-  let data: any = null;
-  let lastError: any = null;
+  let data: unknown = null;
+  let lastError: unknown = null;
 
   for (let attempt = 0; attempt < 3; attempt++) {
-    // Calculate the next order
     const { data: maxOrderData } = await supabaseAdmin
       .from('route_steps')
       .select('step_order')
@@ -44,7 +58,6 @@ export async function POST(
 
     const nextOrder = maxOrderData ? maxOrderData.step_order + 1 : 0;
 
-    // Try to insert
     const result = await supabaseAdmin
       .from('route_steps')
       .insert({
@@ -63,22 +76,18 @@ export async function POST(
       .select()
       .single();
 
-    // If successful, break out of retry loop
     if (!result.error) {
       data = result.data;
       break;
     }
 
-    // If it's a unique constraint violation (code 23505), retry
     if (result.error.code === '23505') {
       console.log(`Unique constraint collision on attempt ${attempt + 1}, retrying...`);
       lastError = result.error;
-      // Small delay before retry to reduce collision likelihood
       await new Promise(resolve => setTimeout(resolve, 10 * (attempt + 1)));
       continue;
     }
 
-    // For other errors, fail immediately
     lastError = result.error;
     break;
   }
@@ -97,25 +106,32 @@ export async function PATCH(
 ) {
   const { roomId } = await params;
 
-  let body: any;
+  const auth = await requireAdminAuth(request, roomId);
+  if (!auth.ok) return auth.response;
+
+  let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { action, adminKey } = body;
-
-  const auth = await validateAdmin(roomId, adminKey);
-  if (!auth.valid) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-  }
+  const action = body.action as string | undefined;
 
   switch (action) {
     case 'update_checkbox': {
-      const { stepId, playerState } = body;
-      if (!stepId || !playerState || typeof playerState !== 'object') {
+      const stepId = body.stepId;
+      const playerState = body.playerState;
+      if (!stepId || typeof stepId !== 'string') {
+        return NextResponse.json({ error: 'Invalid step ID' }, { status: 400 });
+      }
+      if (!playerState || typeof playerState !== 'object' || Array.isArray(playerState)) {
         return NextResponse.json({ error: 'Invalid checkbox data' }, { status: 400 });
+      }
+      for (const val of Object.values(playerState as Record<string, unknown>)) {
+        if (typeof val !== 'boolean' && val !== null) {
+          return NextResponse.json({ error: 'Player state values must be boolean or null' }, { status: 400 });
+        }
       }
       const { error } = await supabaseAdmin
         .from('route_steps')
@@ -130,9 +146,17 @@ export async function PATCH(
     }
 
     case 'reorder': {
-      const { stepUpdates } = body;
+      const stepUpdates = body.stepUpdates;
       if (!Array.isArray(stepUpdates)) {
         return NextResponse.json({ error: 'Invalid step updates' }, { status: 400 });
+      }
+      if (stepUpdates.length > 500) {
+        return NextResponse.json({ error: 'Too many step updates (max 500)' }, { status: 400 });
+      }
+      for (const item of stepUpdates) {
+        if (typeof item.id !== 'string' || typeof item.step_order !== 'number' || !Number.isInteger(item.step_order) || item.step_order < 0) {
+          return NextResponse.json({ error: 'Invalid step update format' }, { status: 400 });
+        }
       }
       const { error } = await supabaseAdmin.rpc('reorder_route_steps', {
         p_room_id: roomId,
@@ -156,21 +180,18 @@ export async function DELETE(
 ) {
   const { roomId } = await params;
 
-  let body: any;
+  const auth = await requireAdminAuth(request, roomId);
+  if (!auth.ok) return auth.response;
+
+  let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { adminKey, stepId } = body;
-
-  const auth = await validateAdmin(roomId, adminKey);
-  if (!auth.valid) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-  }
-
-  if (!stepId) {
+  const stepId = body.stepId;
+  if (!stepId || typeof stepId !== 'string') {
     return NextResponse.json({ error: 'Missing step ID' }, { status: 400 });
   }
 

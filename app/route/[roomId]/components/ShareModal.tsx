@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
 export interface ShareModalProps {
   copiedLink: 'admin' | 'view' | null;
   onCopyAdminLink: () => void;
@@ -13,9 +15,27 @@ export default function ShareModal({
   onCopyViewOnlyLink,
   onClose,
 }: ShareModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Auto-focus first button on mount
+    const firstButton = dialogRef.current?.querySelector('button');
+    firstButton?.focus();
+  }, []);
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg p-6 w-[440px] shadow-2xl">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Share Route"
+        className="bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg p-6 w-[440px] shadow-2xl"
+      >
         <h2 className="text-xl font-bold mb-2 text-[var(--text-primary)]">
           Share Route
         </h2>
@@ -51,7 +71,7 @@ export default function ShareModal({
                   ? 'bg-[var(--success)] text-white'
                   : 'bg-[var(--gold)] text-white'
               }`}>
-                {copiedLink === 'admin' ? '✓ Copied!' : 'Copy'}
+                {copiedLink === 'admin' ? 'Copied!' : 'Copy'}
               </div>
             </div>
           </button>
@@ -83,7 +103,7 @@ export default function ShareModal({
                   ? 'bg-[var(--success)] text-white'
                   : 'bg-[var(--steel)] text-white'
               }`}>
-                {copiedLink === 'view' ? '✓ Copied!' : 'Copy'}
+                {copiedLink === 'view' ? 'Copied!' : 'Copy'}
               </div>
             </div>
           </button>

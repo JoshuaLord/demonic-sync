@@ -1,7 +1,7 @@
 'use client';
 
 import { supabase } from '@/lib/supabase';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import { ChevronRight, ChevronDown, Plus } from 'lucide-react';
 import { useDraggable } from '@dnd-kit/core';
 
@@ -39,7 +39,7 @@ interface DraggableTaskCardProps {
   onAddTask: (taskId: number) => void;
 }
 
-function DraggableTaskCard({ task, isAdmin, onAddTask }: DraggableTaskCardProps) {
+const DraggableTaskCard = memo(function DraggableTaskCard({ task, isAdmin, onAddTask }: DraggableTaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `library-${task.id}`,
     disabled: !isAdmin,
@@ -105,7 +105,7 @@ function DraggableTaskCard({ task, isAdmin, onAddTask }: DraggableTaskCardProps)
       </h3>
     </div>
   );
-}
+});
 
 export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTask, onCollapse, position = 'sidebar', routeSteps }: TaskLibraryProps) {
   const [tasks, setTasks] = useState<OfficialTask[]>([]);
@@ -179,13 +179,13 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
   }, [tasks, routeSteps, searchQuery, selectedRegions, selectedTiers, selectedSkill]);
 
   // Get unique values for filters
-  const regions = Array.from(new Set(tasks.map((t) => t.region))).sort((a, b) => {
+  const regions = useMemo(() => Array.from(new Set(tasks.map((t) => t.region))).sort((a, b) => {
     if (a === 'Global') return -1;
     if (b === 'Global') return 1;
     return a.localeCompare(b);
-  });
+  }), [tasks]);
   const tiers = ['Easy', 'Medium', 'Hard', 'Elite', 'Master'];
-  const skills = Array.from(new Set(tasks.map((t) => t.skill).filter(Boolean))).sort();
+  const skills = useMemo(() => Array.from(new Set(tasks.map((t) => t.skill).filter(Boolean))).sort(), [tasks]);
 
   // Toggle functions for multi-select with bounce animation
   const toggleTier = (tier: string) => {
@@ -216,7 +216,7 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
 
   // Sort tasks by tier, then region
   const tierOrder: Record<string, number> = { 'Easy': 1, 'Medium': 2, 'Hard': 3, 'Elite': 4, 'Master': 5 };
-  const sortedTasks = [...filteredTasks].sort((a, b) => {
+  const sortedTasks = useMemo(() => [...filteredTasks].sort((a, b) => {
     // Sort by tier first
     const tierDiff = tierOrder[a.tier] - tierOrder[b.tier];
     if (tierDiff !== 0) return tierDiff;
@@ -225,7 +225,7 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
     if (a.region === 'Global' && b.region !== 'Global') return -1;
     if (b.region === 'Global' && a.region !== 'Global') return 1;
     return a.region.localeCompare(b.region);
-  });
+  }), [filteredTasks]);
 
   return (
     <div className="h-full flex flex-col bg-[var(--bg-base)]" data-tour="task-library">
@@ -244,7 +244,15 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
                     bouncingChip === `tier-${tier}` ? 'animate-chip-bounce' : ''
                   } ${
                     selectedTiers.includes(tier)
-                      ? 'bg-[var(--crimson)] text-white'
+                      ? tier === 'Easy'
+                        ? 'bg-emerald-600 text-white'
+                        : tier === 'Medium'
+                        ? 'bg-amber-500 text-white'
+                        : tier === 'Hard'
+                        ? 'bg-orange-600 text-white'
+                        : tier === 'Elite'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-red-600 text-white'
                       : 'bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
                   }`}
                 >

@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
 type PlayerNames = Record<string, string>;
 
 export interface PlayerModalProps {
@@ -19,9 +21,27 @@ export default function PlayerModal({
   onSave,
   onClose,
 }: PlayerModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Auto-focus first input on mount
+    const firstInput = dialogRef.current?.querySelector('input');
+    firstInput?.focus();
+  }, []);
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg p-6 w-96 shadow-2xl">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Manage Players"
+        className="bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg p-6 w-96 shadow-2xl"
+      >
         <h2 className="text-xl font-bold mb-4 text-[var(--text-primary)]">
           Manage Players
         </h2>

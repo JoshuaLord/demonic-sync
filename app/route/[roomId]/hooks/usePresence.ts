@@ -32,8 +32,7 @@ function generateIdentity() {
 
 export function usePresence(
   roomId: string,
-  isAdmin: boolean,
-  adminKey: string | null
+  isAdmin: boolean
 ) {
   const [others, setOthers] = useState<PresenceUser[]>([]);
   const [ready, setReady] = useState(false);
@@ -51,7 +50,13 @@ export function usePresence(
 
   // Admin session management for broadcasting control
   const { sessionId, realtimeToken, canBroadcast, queuePosition, totalAdmins } =
-    useAdminSession(roomId, isAdmin, adminKey);
+    useAdminSession(roomId, isAdmin);
+
+  // Refs to avoid stale closures in broadcastCursor
+  const canBroadcastRef = useRef(canBroadcast);
+  canBroadcastRef.current = canBroadcast;
+  const sessionIdRef = useRef(sessionId);
+  sessionIdRef.current = sessionId;
 
   // Generate identity on mount (client-side only), restoring saved name/color from localStorage
   useEffect(() => {
@@ -69,7 +74,7 @@ export function usePresence(
 
   const broadcastCursor = useCallback(() => {
     const channel = channelRef.current;
-    if (!channel || !identityRef.current || !canBroadcast) return;
+    if (!channel || !identityRef.current || !canBroadcastRef.current) return;
 
     const now = Date.now();
     // Throttle: 50ms → 100ms for cost reduction
@@ -88,12 +93,12 @@ export function usePresence(
       type: 'broadcast',
       event: 'cursor',
       payload: {
-        id: sessionId,
+        id: sessionIdRef.current,
         x: mouseRef.current.x,
         y: mouseRef.current.y,
       },
     });
-  }, [canBroadcast, sessionId]);
+  }, []);
 
   // Push refreshed JWT to Realtime on each heartbeat
   useEffect(() => {
@@ -126,8 +131,8 @@ export function usePresence(
       const users: PresenceUser[] = [];
       for (const [key, presences] of Object.entries(state)) {
         if (key === sessionId) continue;
-        const p = presences[0] as any;
-        if (p) {
+        const p = presences[0] as { id?: string; name?: string; color?: string } | undefined;
+        if (p?.id && p.name && p.color) {
           const cursor = cursorMapRef.current.get(p.id) || { x: 0, y: 0 };
           const nameOverride = nameOverridesRef.current.get(p.id);
           users.push({
@@ -180,7 +185,7 @@ export function usePresence(
 
     const handleMouseMove = (e: MouseEvent) => {
       mouseRef.current = { x: e.clientX, y: e.clientY };
-      if (canBroadcast) {
+      if (canBroadcastRef.current) {
         broadcastCursor();
       }
     };
@@ -193,7 +198,7 @@ export function usePresence(
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [roomId, ready, isAdmin, sessionId, realtimeToken, canBroadcast, broadcastCursor]);
+  }, [roomId, ready, isAdmin, sessionId, realtimeToken, broadcastCursor]);
 
   const setName = useCallback((newName: string) => {
     const trimmed = newName.trim().slice(0, 20);
