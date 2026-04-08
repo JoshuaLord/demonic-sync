@@ -127,7 +127,7 @@ export default function BuildPlanner({
                   {/* Relic icon - pentagon placeholder when empty, relic image when selected */}
                   {selectedRelic ? (
                     <img
-                      src={`/images/relics/${nameToFilename(selectedRelic.name)}.png`}
+                      src={selectedRelic.icon_url || `/images/relics/${nameToFilename(selectedRelic.name)}.png`}
                       alt={selectedRelic.name}
                       className="flex-shrink-0 w-10 h-10 object-contain"
                     />

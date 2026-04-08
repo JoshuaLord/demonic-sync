@@ -86,7 +86,7 @@ export default function RelicSelectionModal({
   const renderRelicCard = (relic: OfficialRelic) => {
     const isSelected = relic.id === selectedId;
     const isHovered = hoveredId === relic.id;
-    const imagePath = `/images/relics/${nameToFilename(relic.name)}.png`;
+    const imagePath = relic.icon_url || `/images/relics/${nameToFilename(relic.name)}.png`;
     const imgFailed = failedImages.has(relic.id);
 
     return (
