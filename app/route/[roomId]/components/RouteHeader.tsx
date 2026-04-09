@@ -1,6 +1,7 @@
 'use client';
 
-import { Pencil, HelpCircle } from 'lucide-react';
+import { Pencil, HelpCircle, Home } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import ThemeToggle from '@/components/ThemeToggle';
 import PresenceAvatars from './PresenceAvatars';
 import BroadcastStatus from './BroadcastStatus';
@@ -20,6 +21,7 @@ export interface RouteHeaderProps {
   mounted: boolean;
   totalPoints: number;
   totalTasks: number;
+  totalPactPoints: number;
   nextRelic: NextMilestone | null;
   nextArea: NextMilestone | null;
   isEditingName: boolean;
@@ -46,6 +48,7 @@ export default function RouteHeader({
   mounted,
   totalPoints,
   totalTasks,
+  totalPactPoints,
   nextRelic,
   nextArea,
   isEditingName,
@@ -65,6 +68,8 @@ export default function RouteHeader({
   queuePosition = 0,
   totalAdmins = 0,
 }: RouteHeaderProps) {
+  const router = useRouter();
+
   return (
     <div className="border-b border-[var(--border-strong)] bg-[var(--bg-elevated)] px-6 py-4">
       <div className="flex justify-between items-center">
@@ -127,6 +132,11 @@ export default function RouteHeader({
                 {totalTasks}
               </span>
               <span className="text-[var(--text-tertiary)]">tasks</span>
+              <div className="w-px h-4 bg-[var(--border-standard)]"></div>
+              <span className="text-violet-500">
+                {totalPactPoints}
+              </span>
+              <span className="text-[var(--text-tertiary)]">/40 pact</span>
             </div>
 
             <div className="flex items-center gap-4 pl-4 border-l border-[var(--border-standard)]">
@@ -204,6 +214,13 @@ export default function RouteHeader({
               </button>
             </>
           )}
+          <button
+            onClick={() => router.push('/')}
+            className="p-1.5 rounded-md hover:bg-[var(--bg-surface)] transition-colors"
+            title="Back to home"
+          >
+            <Home size={18} className="text-[var(--text-tertiary)]" />
+          </button>
           <span data-tour="theme-toggle"><ThemeToggle /></span>
           <button
             onClick={onStartTour}

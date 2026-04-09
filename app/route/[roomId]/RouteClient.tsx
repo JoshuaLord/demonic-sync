@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { SafeRoom, RouteStep, OfficialRelic, OfficialRegion, MilestoneSelections } from '@/types';
 import { apiRoomUpdate, apiStepInsert, apiStepUpdate, apiStepDelete, apiAuthenticate, apiFetchAdminKey } from '@/lib/api';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { GripVertical, GripHorizontal, X, BookOpen, Trophy } from 'lucide-react';
+import { GripVertical, GripHorizontal, X, BookOpen, Trophy, Map, Crown, Eye, Clock } from 'lucide-react';
 import TaskLibrary from './TaskLibrary';
 import BuildPlanner from './components/BuildPlanner';
 import {
@@ -32,6 +32,7 @@ import {
 import { snapCenterToCursor } from '@dnd-kit/modifiers';
 
 import { startTour, hasSeenTour } from '@/lib/tour';
+import { saveRecentRoom, getRecentRooms, removeRecentRoom, timeAgo, RecentRoom } from '@/lib/recent-rooms';
 import 'driver.js/dist/driver.css';
 
 import RouteHeader from './components/RouteHeader';
@@ -42,6 +43,7 @@ import ShareModal from './components/ShareModal';
 import LiveCursors from './components/LiveCursors';
 import Tooltip from './components/Tooltip';
 import { usePresence } from './hooks/usePresence';
+import { useRouter } from 'next/navigation';
 
 type PlayerNames = Record<string, string>;
 
@@ -64,6 +66,8 @@ export default function RouteClient({
   relics: OfficialRelic[];
   regions: OfficialRegion[];
 }) {
+  const router = useRouter();
+
   // ──────────────────────────────────────────────
   // State
   // ──────────────────────────────────────────────
@@ -94,7 +98,8 @@ export default function RouteClient({
   const [libraryWidth, setLibraryWidth] = useState(350);
   const [libraryHeight, setLibraryHeight] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<'library' | 'unlocks'>('library');
+  const [sidebarTab, setSidebarTab] = useState<'library' | 'unlocks' | 'routes'>('library');
+  const [recentRooms, setRecentRooms] = useState<RecentRoom[]>([]);
 
   const tourTriggered = useRef(false);
 
@@ -169,10 +174,24 @@ export default function RouteClient({
     if (storedHeight) setLibraryHeight(parseInt(storedHeight, 10));
 
     const storedTab = localStorage.getItem('sidebar_tab');
-    if (storedTab === 'library' || storedTab === 'unlocks') setSidebarTab(storedTab);
+    if (storedTab === 'library' || storedTab === 'unlocks' || storedTab === 'routes') setSidebarTab(storedTab);
 
     setMounted(true);
   }, [room.id]);
+
+  // ──────────────────────────────────────────────
+  // Save to recent rooms (on mount & when name/admin changes)
+  // ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!mounted) return;
+    saveRecentRoom({
+      roomId: room.id,
+      name: roomName,
+      lastVisited: new Date().toISOString(),
+      isAdmin,
+    });
+    setRecentRooms(getRecentRooms());
+  }, [mounted, roomName, isAdmin, room.id]);
 
   // ──────────────────────────────────────────────
   // Guided tour auto-trigger
@@ -301,6 +320,7 @@ export default function RouteClient({
         task_tier: task.tier,
         task_points: task.points,
         task_region: task.region,
+        is_pact_task: task.is_pact_task ?? false,
         player_state: {},
       });
     } catch (err: any) {
@@ -516,9 +536,13 @@ export default function RouteClient({
     localStorage.setItem('library_position', newPosition);
   }
 
-  function switchSidebarTab(tab: 'library' | 'unlocks') {
+  function switchSidebarTab(tab: 'library' | 'unlocks' | 'routes') {
     setSidebarTab(tab);
     localStorage.setItem('sidebar_tab', tab);
+    // Refresh recent rooms when switching to routes tab
+    if (tab === 'routes') {
+      setRecentRooms(getRecentRooms());
+    }
     // Auto-expand if collapsed
     if (isLibraryCollapsed) {
       setIsLibraryCollapsed(false);
@@ -763,6 +787,7 @@ export default function RouteClient({
           task_tier: task.tier,
           task_points: task.points,
           task_region: task.region,
+          is_pact_task: (task as DragTaskData & { is_pact_task?: boolean }).is_pact_task ?? false,
           player_state: {},
         });
         newStepTyped = result.step as RouteStep;
@@ -877,6 +902,10 @@ export default function RouteClient({
     return { totalPoints: points, totalTasks: tasks, cumulativeByStepId: cumulative };
   }, [steps]);
 
+  const totalPactPoints = useMemo(() =>
+    steps.filter(s => s.is_pact_task).length,
+  [steps]);
+
   const nextMilestones = useMemo(() => {
     let nextRelic = null;
     for (const tier of RELIC_TIERS) {
@@ -927,6 +956,7 @@ export default function RouteClient({
         mounted={mounted}
         totalPoints={totalPoints}
         totalTasks={totalTasks}
+        totalPactPoints={totalPactPoints}
         nextRelic={nextMilestones.nextRelic}
         nextArea={nextMilestones.nextArea}
         isEditingName={isEditingName}
@@ -1048,6 +1078,14 @@ export default function RouteClient({
                     <Trophy size={18} />
                   </button>
                 </Tooltip>
+                <Tooltip text="Routes" position="left">
+                  <button
+                    onClick={() => switchSidebarTab('routes')}
+                    className="p-2 rounded transition-all text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]"
+                  >
+                    <Map size={18} />
+                  </button>
+                </Tooltip>
               </div>
             ) : (
               /* Expanded: Content with top tab bar */
@@ -1076,6 +1114,17 @@ export default function RouteClient({
                     <Trophy size={16} />
                     <span className="text-sm font-semibold">Unlocks</span>
                   </button>
+                  <button
+                    onClick={() => switchSidebarTab('routes')}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded transition-all ${
+                      sidebarTab === 'routes'
+                        ? 'bg-[var(--crimson)] text-white shadow-md'
+                        : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]'
+                    }`}
+                  >
+                    <Map size={16} />
+                    <span className="text-sm font-semibold">Routes</span>
+                  </button>
 
                   {/* Close Button */}
                   <button
@@ -1099,7 +1148,7 @@ export default function RouteClient({
                       position={libraryPosition}
                       routeSteps={steps}
                     />
-                  ) : (
+                  ) : sidebarTab === 'unlocks' ? (
                     <BuildPlanner
                       relics={relics}
                       regions={regions}
@@ -1109,6 +1158,72 @@ export default function RouteClient({
                       onCollapse={toggleLibrary}
                       position={libraryPosition}
                     />
+                  ) : (
+                    /* Routes panel */
+                    <div className="h-full flex flex-col overflow-y-auto p-3 gap-2">
+                      {recentRooms.length === 0 ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-tertiary)] gap-2 py-8">
+                          <Map size={32} />
+                          <p className="text-sm">No recent routes</p>
+                        </div>
+                      ) : (
+                        recentRooms.map((r) => {
+                          const isCurrent = r.roomId === room.id;
+                          return (
+                            <div
+                              key={r.roomId}
+                              className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all ${
+                                isCurrent
+                                  ? 'bg-[var(--crimson)]/10 border-[var(--crimson)]/30'
+                                  : 'bg-[var(--bg-surface)] border-[var(--border-standard)] hover:border-[var(--border-strong)] cursor-pointer'
+                              }`}
+                              onClick={() => { if (!isCurrent) router.push(`/route/${r.roomId}`); }}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-sm font-semibold truncate ${isCurrent ? 'text-[var(--crimson)]' : 'text-[var(--text-primary)]'}`}>
+                                    {r.name}
+                                  </span>
+                                  {isCurrent && (
+                                    <span className="text-[10px] font-bold uppercase text-[var(--crimson)] bg-[var(--crimson)]/10 px-1.5 py-0.5 rounded">
+                                      Current
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  {r.isAdmin ? (
+                                    <Crown size={12} className="text-[var(--gold)] flex-shrink-0" />
+                                  ) : (
+                                    <Eye size={12} className="text-[var(--steel)] flex-shrink-0" />
+                                  )}
+                                  <span className="text-xs text-[var(--text-tertiary)]">
+                                    {r.isAdmin ? 'Admin' : 'Viewer'}
+                                  </span>
+                                  <span className="text-[var(--border-standard)]">·</span>
+                                  <Clock size={12} className="text-[var(--text-tertiary)] flex-shrink-0" />
+                                  <span className="text-xs text-[var(--text-tertiary)]">
+                                    {timeAgo(r.lastVisited)}
+                                  </span>
+                                </div>
+                              </div>
+                              {!isCurrent && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeRecentRoom(r.roomId);
+                                    setRecentRooms(getRecentRooms());
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--bg-hover)] rounded transition-all flex-shrink-0"
+                                  title="Remove from recent"
+                                >
+                                  <X size={14} className="text-[var(--text-tertiary)]" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
