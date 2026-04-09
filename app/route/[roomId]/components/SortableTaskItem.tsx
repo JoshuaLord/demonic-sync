@@ -134,6 +134,11 @@ const SortableTaskItem = memo(function SortableTaskItem({
                 >
                   {step.task_tier}
                 </span>
+                {step.is_pact_task && (
+                  <span className="px-1 py-0.5 rounded text-[10px] font-bold flex-shrink-0 bg-violet-500/15 text-violet-600 dark:text-violet-400">
+                    PACT
+                  </span>
+                )}
                 <span className="w-10 text-xs text-[var(--gold)] font-mono font-bold flex-shrink-0 pl-2">
                   {step.task_points}
                 </span>

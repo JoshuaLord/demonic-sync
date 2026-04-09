@@ -95,6 +95,8 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: number
+          is_pact_task: boolean
+          league: string
           name: string
           points: number
           region: string
@@ -107,6 +109,8 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id: number
+          is_pact_task?: boolean
+          league?: string
           name: string
           points: number
           region: string
@@ -119,6 +123,8 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: number
+          is_pact_task?: boolean
+          league?: string
           name?: string
           points?: number
           region?: string
@@ -200,6 +206,7 @@ export type Database = {
           created_at: string | null
           custom_text: string | null
           id: string
+          is_pact_task: boolean
           player_state: Json
           room_id: string
           step_order: number
@@ -216,6 +223,7 @@ export type Database = {
           created_at?: string | null
           custom_text?: string | null
           id?: string
+          is_pact_task?: boolean
           player_state?: Json
           room_id: string
           step_order: number
@@ -232,6 +240,7 @@ export type Database = {
           created_at?: string | null
           custom_text?: string | null
           id?: string
+          is_pact_task?: boolean
           player_state?: Json
           room_id?: string
           step_order?: number
@@ -420,4 +429,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

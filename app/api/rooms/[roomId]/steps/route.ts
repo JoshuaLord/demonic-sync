@@ -71,6 +71,7 @@ export async function POST(
         task_points: stepData.task_points ?? null,
         task_region: stepData.task_region ?? null,
         custom_text: stepData.custom_text ?? null,
+        is_pact_task: stepData.is_pact_task === true,
         player_state: stepData.player_state ?? {},
       })
       .select()

@@ -14,6 +14,8 @@ interface OfficialTask {
   region: string;
   skill: string | null;
   category: string | null;
+  league: string;
+  is_pact_task: boolean;
 }
 
 interface RouteStep {
@@ -78,7 +80,7 @@ const DraggableTaskCard = memo(function DraggableTaskCard({ task, isAdmin, onAdd
         </button>
       )}
 
-      {/* Header Row: Tier + Region + Points */}
+      {/* Header Row: Tier + Pact Badge + Region + Points */}
       <div className="flex items-center gap-1.5 mb-1.5 pointer-events-none">
         <span
           className={`px-1.5 py-0.5 rounded text-xs font-bold flex-shrink-0 ${
@@ -95,6 +97,11 @@ const DraggableTaskCard = memo(function DraggableTaskCard({ task, isAdmin, onAdd
         >
           {task.tier}
         </span>
+        {task.is_pact_task && (
+          <span className="px-1.5 py-0.5 rounded text-xs font-bold flex-shrink-0 bg-violet-500/15 text-violet-600 dark:text-violet-400">
+            PACT
+          </span>
+        )}
         <span className="text-xs text-[var(--text-tertiary)] truncate flex-1">{task.region}</span>
         <span className="text-xs text-[var(--gold)] font-bold flex-shrink-0">{task.points}</span>
       </div>
@@ -117,13 +124,17 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
   const [showCustomTaskModal, setShowCustomTaskModal] = useState(false);
   const [customTaskText, setCustomTaskText] = useState('');
   const [bouncingChip, setBouncingChip] = useState<string | null>(null);
+  const [selectedLeague, setSelectedLeague] = useState<'demonic' | 'echoes'>('demonic');
+  const [showPactOnly, setShowPactOnly] = useState(false);
 
-  // Fetch all tasks on mount
+  // Fetch tasks filtered by league
   useEffect(() => {
     async function fetchTasks() {
+      setLoading(true);
       const { data, error } = await supabase
         .from('official_tasks')
         .select('*')
+        .eq('league', selectedLeague)
         .order('id', { ascending: true });
 
       if (error) {
@@ -136,7 +147,14 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
     }
 
     fetchTasks();
-  }, []);
+  }, [selectedLeague]);
+
+  // Reset pact filter when switching leagues
+  useEffect(() => {
+    if (selectedLeague !== 'demonic') {
+      setShowPactOnly(false);
+    }
+  }, [selectedLeague]);
 
   // Apply filters with useMemo to avoid dependency array issues
   const filteredTasks = useMemo(() => {
@@ -149,6 +167,11 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
         .map(step => step.task_id)
     );
     result = result.filter(task => !usedTaskIds.has(task.id));
+
+    // Pact-only filter
+    if (showPactOnly) {
+      result = result.filter(task => task.is_pact_task);
+    }
 
     // Search filter
     if (searchQuery.trim()) {
@@ -176,12 +199,14 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
     }
 
     return result;
-  }, [tasks, routeSteps, searchQuery, selectedRegions, selectedTiers, selectedSkill]);
+  }, [tasks, routeSteps, searchQuery, selectedRegions, selectedTiers, selectedSkill, showPactOnly]);
 
   // Get unique values for filters
   const regions = useMemo(() => Array.from(new Set(tasks.map((t) => t.region))).sort((a, b) => {
     if (a === 'Global') return -1;
     if (b === 'Global') return 1;
+    if (a === 'General') return -1;
+    if (b === 'General') return 1;
     return a.localeCompare(b);
   }), [tasks]);
   const tiers = ['Easy', 'Medium', 'Hard', 'Elite', 'Master'];
@@ -221,9 +246,11 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
     const tierDiff = tierOrder[a.tier] - tierOrder[b.tier];
     if (tierDiff !== 0) return tierDiff;
 
-    // Then by region (Global first, then alphabetical)
+    // Then by region (Global/General first, then alphabetical)
     if (a.region === 'Global' && b.region !== 'Global') return -1;
     if (b.region === 'Global' && a.region !== 'Global') return 1;
+    if (a.region === 'General' && b.region !== 'General') return -1;
+    if (b.region === 'General' && a.region !== 'General') return 1;
     return a.region.localeCompare(b.region);
   }), [filteredTasks]);
 
@@ -231,6 +258,43 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
     <div className="h-full flex flex-col bg-[var(--bg-base)]" data-tour="task-library">
       {/* Header */}
       <div className="p-3 border-b border-[var(--border-standard)]">
+        {/* League Toggle */}
+        <div className="flex gap-1.5 mb-2">
+          <button
+            onClick={() => setSelectedLeague('demonic')}
+            className={`flex-1 px-2 py-1.5 rounded text-xs font-bold transition-colors ${
+              selectedLeague === 'demonic'
+                ? 'bg-[var(--crimson)] text-white shadow-md'
+                : 'bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
+            }`}
+          >
+            Demonic Pacts
+          </button>
+          <button
+            onClick={() => setSelectedLeague('echoes')}
+            className={`flex-1 px-2 py-1.5 rounded text-xs font-bold transition-colors ${
+              selectedLeague === 'echoes'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
+            }`}
+          >
+            Raging Echoes
+          </button>
+        </div>
+
+        {/* Pact Tasks Only Checkbox (only for demonic league) */}
+        {selectedLeague === 'demonic' && (
+          <label className="flex items-center gap-2 mb-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showPactOnly}
+              onChange={(e) => setShowPactOnly(e.target.checked)}
+              className="cursor-pointer"
+            />
+            <span className="text-xs font-semibold text-violet-500">Pact Tasks Only</span>
+          </label>
+        )}
+
         {/* Compact Filters */}
         <div className="space-y-2 mb-2">
           {/* Tier Filter - Multi-Select */}

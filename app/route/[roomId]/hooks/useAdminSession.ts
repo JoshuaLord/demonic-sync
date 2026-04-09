@@ -88,15 +88,46 @@ export function useAdminSession(
   useEffect(() => {
     if (!isAdmin) return;
 
-    // Register on mount
-    registerSession();
+    let interval: ReturnType<typeof setInterval> | null = null;
+    let registered = false;
 
-    // Heartbeat every 30s
-    const interval = setInterval(heartbeat, 30000);
+    function startHeartbeat() {
+      if (interval) return;
+      if (!registered) {
+        registerSession();
+        registered = true;
+      } else {
+        // Re-register after returning from hidden (session may have expired)
+        registerSession();
+      }
+      interval = setInterval(heartbeat, 30000);
+    }
 
-    // Cleanup on unmount
+    function stopHeartbeat() {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    }
+
+    function handleVisibility() {
+      if (document.hidden) {
+        stopHeartbeat();
+      } else {
+        startHeartbeat();
+      }
+    }
+
+    // Start immediately if tab is visible
+    if (!document.hidden) {
+      startHeartbeat();
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
     return () => {
-      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      stopHeartbeat();
       unregisterSession();
     };
   }, [isAdmin, registerSession, heartbeat, unregisterSession]);
