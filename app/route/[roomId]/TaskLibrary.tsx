@@ -232,6 +232,38 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
   const clearTiers = () => setSelectedTiers([]);
   const clearRegions = () => setSelectedRegions([]);
 
+  // Get region-specific color (based on OSRS region themes)
+  const getRegionColor = (region: string): string => {
+    switch (region) {
+      case 'Asgarnia':
+        return 'bg-blue-600'; // Blue (Falador, ice theme)
+      case 'Fremennik':
+        return 'bg-cyan-500'; // Cyan (northern, icy)
+      case 'Kandarin':
+        return 'bg-green-600'; // Green (forests, nature)
+      case 'Desert':
+      case 'Kharidian Desert':
+        return 'bg-orange-500'; // Orange (sandy desert)
+      case 'Morytania':
+        return 'bg-purple-700'; // Purple (gothic, dark)
+      case 'Tirannwn':
+        return 'bg-teal-500'; // Teal (elven, crystal)
+      case 'Wilderness':
+        return 'bg-red-700'; // Red (dangerous, pvp)
+      case 'Kourend':
+      case 'Great Kourend':
+        return 'bg-indigo-600'; // Indigo (Zeah kingdoms)
+      case 'Karamja':
+        return 'bg-emerald-600'; // Emerald (jungle, tropical)
+      case 'Misthalin':
+        return 'bg-amber-600'; // Amber (Varrock, Lumbridge)
+      case 'Varlamore':
+        return 'bg-rose-600'; // Rose (new region, hunter theme)
+      default:
+        return 'bg-[var(--crimson)]'; // Default crimson for General/Global
+    }
+  };
+
   const handleAddCustomTask = () => {
     if (!customTaskText.trim()) return;
     onAddCustomTask(customTaskText.trim());
@@ -282,19 +314,6 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
           </button>
         </div>
 
-        {/* Pact Tasks Only Checkbox (only for demonic league) */}
-        {selectedLeague === 'demonic' && (
-          <label className="flex items-center gap-2 mb-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={showPactOnly}
-              onChange={(e) => setShowPactOnly(e.target.checked)}
-              className="cursor-pointer"
-            />
-            <span className="text-xs font-semibold text-violet-500">Pact Tasks Only</span>
-          </label>
-        )}
-
         {/* Compact Filters */}
         <div className="space-y-2 mb-2">
           {/* Tier Filter - Multi-Select */}
@@ -340,13 +359,32 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
                     bouncingChip === `region-${region}` ? 'animate-chip-bounce' : ''
                   } ${
                     selectedRegions.includes(region)
-                      ? 'bg-[var(--crimson)] text-white'
+                      ? `${getRegionColor(region)} text-white`
                       : 'bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
                   }`}
                 >
                   {region}
                 </button>
               ))}
+              {/* Pact Tasks Filter Button (only for demonic league) */}
+              {selectedLeague === 'demonic' && (
+                <button
+                  onClick={() => {
+                    setShowPactOnly(!showPactOnly);
+                    setBouncingChip('pact-filter');
+                    setTimeout(() => setBouncingChip(null), 300);
+                  }}
+                  className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
+                    bouncingChip === 'pact-filter' ? 'animate-chip-bounce' : ''
+                  } ${
+                    showPactOnly
+                      ? 'bg-violet-500 text-white'
+                      : 'bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
+                  }`}
+                >
+                  Pact Tasks
+                </button>
+              )}
             </div>
           </div>
 
@@ -406,17 +444,18 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
             <h2 className="text-xl font-bold mb-4 text-[var(--text-primary)]">
               Add Custom Task
             </h2>
-            <input
-              type="text"
+            <textarea
               value={customTaskText}
               onChange={(e) => setCustomTaskText(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAddCustomTask();
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddCustomTask(); }
                 if (e.key === 'Escape') setShowCustomTaskModal(false);
               }}
               placeholder="Enter task description..."
+              maxLength={500}
+              rows={3}
               autoFocus
-              className="w-full bg-[var(--bg-surface)] border border-[var(--border-standard)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--gold)] transition-colors mb-4"
+              className="w-full bg-[var(--bg-surface)] border border-[var(--border-standard)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--gold)] transition-colors mb-4 resize-y min-h-[4.5rem]"
             />
             <div className="flex gap-2 justify-end">
               <button

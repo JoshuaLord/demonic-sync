@@ -9,8 +9,8 @@ export type PresenceUser = {
   id: string;
   name: string;
   color: string;
-  x: number;
-  y: number;
+  x: number; // Percentage (0-100)
+  y: number; // Percentage (0-100)
 };
 
 const COLORS = [
@@ -185,7 +185,10 @@ export function usePresence(
     });
 
     const handleMouseMove = (e: MouseEvent) => {
-      mouseRef.current = { x: e.clientX, y: e.clientY };
+      // Convert to percentages for viewport-independent positioning
+      const xPercent = (e.clientX / window.innerWidth) * 100;
+      const yPercent = (e.clientY / window.innerHeight) * 100;
+      mouseRef.current = { x: xPercent, y: yPercent };
       if (canBroadcastRef.current) {
         broadcastCursor();
       }

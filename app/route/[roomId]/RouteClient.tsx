@@ -595,28 +595,41 @@ export default function RouteClient({
   // ──────────────────────────────────────────────
   // Custom collision detection
   // ──────────────────────────────────────────────
-  // For library→route drags: use pointerWithin so the indicator follows the cursor.
-  // For route→route reorders: use closestCenter (works great for sortable lists).
-  // In both cases, prefer individual sortable items over the container droppable.
+  // Prefer individual sortable items over the container droppable.
+  // When the pointer is below all items, return the container so
+  // handleDragOver appends at the end instead of snapping to the nearest item.
   const collisionDetection: CollisionDetection = useCallback((args) => {
-    // Both library and route drags use the same preview system now,
-    // so use the same pointer-based collision for both.
     const pointerCollisions = pointerWithin(args);
     const itemHits = pointerCollisions.filter(c => c.id !== 'route-list');
     if (itemHits.length > 0) return itemHits;
 
-    // Pointer is in a gap between items - pointerWithin only found the container.
-    // Fall back to closestCenter to find the nearest item instead of snapping to end.
+    // Pointer is inside the container but not over any item.
+    // If below the last item, return the container for "append at end".
+    if (pointerCollisions.some(c => c.id === 'route-list')) {
+      let maxBottom = 0;
+      for (const container of args.droppableContainers) {
+        if (container.id === 'route-list') continue;
+        const rect = container.rect.current;
+        if (rect) {
+          maxBottom = Math.max(maxBottom, rect.top + rect.height);
+        }
+      }
+      if ((args.pointerCoordinates?.y ?? 0) > maxBottom) {
+        return pointerCollisions;
+      }
+    }
+
+    // Pointer is in a gap between items — fall back to closestCenter
     const centerCollisions = closestCenter(args);
     const centerItems = centerCollisions.filter(c => c.id !== 'route-list');
     if (centerItems.length > 0) return centerItems;
 
-    // No items at all (empty list) - return the container so we can drop into it
+    // Empty list — return the container
     return pointerCollisions;
   }, []);
 
   // ──────────────────────────────────────────────
-  // Drag & Drop handlers (CLEAN - no phantom steps)
+  // Drag & Drop handlers
   // ──────────────────────────────────────────────
   function handleDragStart(event: DragStartEvent) {
     const id = String(event.active.id);
@@ -662,6 +675,34 @@ export default function RouteClient({
     }
   }
 
+  // Compute the drop index for a drag hovering over a target.
+  // When previewIndex is null (first hover from library), uses the pointer's
+  // position relative to the hovered item's midpoint to decide above vs below.
+  function resolveDropIndex(
+    overIdStr: string,
+    over: DragOverEvent['over'] & {},
+    event: DragOverEvent,
+  ): number | null {
+    if (overIdStr === 'route-list') {
+      return steps.length;
+    }
+
+    const overStep = steps.findIndex(s => s.id === overIdStr);
+    if (overStep < 0) return null; // over the preview itself — keep current
+
+    if (previewIndex !== null) {
+      // Direction-aware: cursor entering an item displaces it immediately
+      return previewIndex <= overStep ? overStep + 1 : overStep;
+    }
+
+    // First hover — use pointer vs item midpoint
+    const midY = over.rect.top + over.rect.height / 2;
+    const pointerY = event.activatorEvent instanceof PointerEvent
+      ? event.activatorEvent.clientY + (event.delta?.y ?? 0)
+      : midY;
+    return pointerY > midY ? overStep + 1 : overStep;
+  }
+
   function handleDragOver(event: DragOverEvent) {
     const { active, over } = event;
     if (!over) {
@@ -678,33 +719,11 @@ export default function RouteClient({
       const task = active.data.current as DragTaskData & { description?: string | null } | undefined;
       if (!task) return;
 
-      let newIndex: number;
-
-      if (overIdStr === 'route-list') {
-        newIndex = steps.length; // after last item (empty area)
-      } else {
-        // Find over index in the *real* steps (ignore preview)
-        const overStep = steps.findIndex(s => s.id === overIdStr);
-        if (overStep < 0) {
-          // Over item might be the preview itself - keep current index
-          return;
-        }
-
-        // Direction-aware placement: as soon as cursor enters an item,
-        // that item displaces out of the way immediately.
-        if (previewIndex !== null && previewIndex <= overStep) {
-          // Moving down - place after the hovered item
-          newIndex = overStep + 1;
-        } else {
-          // Moving up or first hover - place before the hovered item
-          newIndex = overStep;
-        }
-      }
+      const newIndex = resolveDropIndex(overIdStr, over, event);
+      if (newIndex === null) return;
 
       // Skip update if index hasn't changed
-      if (newIndex === previewIndex && previewStep !== null) {
-        return;
-      }
+      if (newIndex === previewIndex && previewStep !== null) return;
 
       setPreviewIndex(newIndex);
 
@@ -727,31 +746,13 @@ export default function RouteClient({
         } as RouteStep);
       }
     } else {
-      // Route → Route: use preview system (step already removed in handleDragStart)
+      // Route → Route: preview system (step already removed in handleDragStart)
       if (!draggedRouteStep) return;
 
-      let newIndex: number;
+      const newIndex = resolveDropIndex(overIdStr, over, event);
+      if (newIndex === null) return;
 
-      if (overIdStr === 'route-list') {
-        newIndex = steps.length; // after last item
-      } else {
-        const overStep = steps.findIndex(s => s.id === overIdStr);
-        if (overStep < 0) {
-          // Over the preview itself - keep current index
-              return;
-        }
-
-        // Direction-aware placement
-        if (previewIndex !== null && previewIndex <= overStep) {
-          newIndex = overStep + 1;
-        } else {
-          newIndex = overStep;
-        }
-      }
-
-      if (newIndex === previewIndex && previewStep !== null) {
-          return;
-      }
+      if (newIndex === previewIndex && previewStep !== null) return;
 
       setPreviewIndex(newIndex);
     }
@@ -891,16 +892,20 @@ export default function RouteClient({
   const { totalPoints, totalTasks, cumulativeByStepId } = useMemo(() => {
     let points = 0;
     let tasks = 0;
-    const cumulative: Record<string, { points: number; tasks: number }> = {};
+    let pactTasks = 0;
+    const cumulative: Record<string, { points: number; tasks: number; pactTasks: number }> = {};
 
     for (const step of steps) {
       if (step.step_type === 'task' && step.task_points) {
         points += step.task_points;
         tasks += 1;
+        if (step.is_pact_task) {
+          pactTasks += 1;
+        }
       } else if (step.step_type === 'custom') {
         tasks += 1;
       }
-      cumulative[step.id] = { points, tasks };
+      cumulative[step.id] = { points, tasks, pactTasks };
     }
 
     return { totalPoints: points, totalTasks: tasks, cumulativeByStepId: cumulative };

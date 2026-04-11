@@ -86,7 +86,7 @@ const MilestoneRow = memo(function MilestoneRow({
 
   return (
     <div className="bg-gradient-to-r from-[var(--milestone-glow)] to-transparent border-l-2 border-[var(--crimson)] rounded-md p-1.5 flex gap-2 items-center transition-all duration-200 hover:shadow-lg hover:shadow-[var(--crimson)]/30 hover:-translate-y-1">
-      {isAdmin && <div className="w-[14px] flex-shrink-0"></div>}
+      <div className="w-[14px] flex-shrink-0" style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}></div>
 
       <div className="flex-1 min-w-0 flex items-center gap-2">
         {!isRelic && (
@@ -186,7 +186,7 @@ const MilestoneRow = memo(function MilestoneRow({
         </div>
       )}
 
-      {mounted && isAdmin && <div className="w-5 flex-shrink-0"></div>}
+      <div className="w-5 flex-shrink-0" style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}></div>
     </div>
   );
 });

@@ -21,7 +21,7 @@ export interface RouteTaskListProps {
   isAdmin: boolean;
   mounted: boolean;
   deleteClickedId: string | null;
-  cumulativeByStepId: Record<string, { points: number; tasks: number }>;
+  cumulativeByStepId: Record<string, { points: number; tasks: number; pactTasks: number }>;
   completedSteps: Set<string>;
   insertAnimatingIds: Set<string>;
   milestonePlayerState: Record<string, Record<string, boolean>>;
@@ -71,9 +71,7 @@ export default function RouteTaskList({
       {/* Column Headers */}
       {playerIds.length > 0 && steps.length > 0 && (
         <div className="flex gap-2 items-center mb-3 pb-2 border-b border-[var(--border-subtle)]" suppressHydrationWarning>
-          {isAdmin && (
-            <div className="w-[14px] flex-shrink-0"></div>
-          )}
+          <div className="w-[14px] flex-shrink-0" style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}></div>
           <div className="flex-1 text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-wide">
             Task
           </div>
@@ -90,13 +88,11 @@ export default function RouteTaskList({
               </div>
             ))}
           </div>
-          {mounted && isAdmin && (
-            <div className="w-5 flex-shrink-0"></div>
-          )}
+          <div className="w-5 flex-shrink-0" style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}></div>
         </div>
       )}
 
-      <div ref={setRouteDropRef} className={`flex flex-col gap-0.5 ${realSteps.length === 0 ? 'flex-1 min-h-full' : ''}`}>
+      <div ref={setRouteDropRef} className={`flex flex-col gap-0.5 ${realSteps.length === 0 ? 'flex-1 min-h-full' : 'pb-32'}`}>
         {/* Milestones before first task */}
         {milestones
           .filter(m => m.insertAfterIndex === -1)
@@ -124,7 +120,7 @@ export default function RouteTaskList({
         >
           {steps.map((step, index) => {
             const isPreview = step.id === previewStepId;
-            const cumulative = cumulativeByStepId[step.id] || { points: 0, tasks: 0 };
+            const cumulative = cumulativeByStepId[step.id] || { points: 0, tasks: 0, pactTasks: 0 };
             const milestonesAfter = isPreview ? [] : milestones.filter(m => m.insertAfterIndex === index);
 
             return (
@@ -138,6 +134,7 @@ export default function RouteTaskList({
                   deleteClickedId={deleteClickedId}
                   cumulativePoints={cumulative.points}
                   cumulativeTasks={cumulative.tasks}
+                  cumulativePactTasks={cumulative.pactTasks}
                   onToggleCheckbox={onToggleCheckbox}
                   onDelete={onDelete}
                   onDeleteClick={onDeleteClick}

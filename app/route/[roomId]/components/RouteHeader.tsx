@@ -94,33 +94,32 @@ export default function RouteHeader({
                 <h1 className="text-2xl font-bold tracking-tight">
                   {roomName}
                 </h1>
-                {mounted && isAdmin && (
-                  <button
-                    onClick={onStartEditingName}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-[var(--bg-surface)] rounded"
-                    title="Edit route name"
-                  >
-                    <Pencil size={16} className="text-[var(--text-tertiary)]" />
-                  </button>
-                )}
+                <button
+                  onClick={onStartEditingName}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-[var(--bg-surface)] rounded"
+                  title="Edit route name"
+                  style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}
+                >
+                  <Pencil size={16} className="text-[var(--text-tertiary)]" />
+                </button>
               </div>
             )}
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-[var(--bg-surface)] border border-[var(--border-standard)]" suppressHydrationWarning>
+            <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-[var(--bg-surface)] border border-[var(--border-standard)]">
               <div className={`w-1.5 h-1.5 rounded-full ${isAdmin ? 'bg-[var(--gold)]' : 'bg-[var(--steel)]'}`}></div>
-              <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                {mounted && (isAdmin ? 'ADMIN' : 'VIEW-ONLY')}
+              <span className="text-xs font-semibold text-[var(--text-secondary)]" suppressHydrationWarning>
+                {mounted ? (isAdmin ? 'ADMIN' : 'VIEW-ONLY') : ''}
               </span>
             </div>
 
-            {mounted && isAdmin && (
+            <div style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}>
               <BroadcastStatus
                 canBroadcast={canBroadcast}
                 queuePosition={queuePosition}
                 totalAdmins={totalAdmins}
               />
-            )}
+            </div>
 
             <div className="flex items-center gap-3 text-sm font-mono font-semibold">
               <span className="text-[var(--crimson)]" suppressHydrationWarning>
@@ -185,35 +184,33 @@ export default function RouteHeader({
           </div>
         </div>
         <div className="flex items-center gap-4">
-          {mounted && (
+          <div style={{ visibility: mounted ? 'visible' : 'hidden' }}>
             <PresenceAvatars
               others={presenceOthers}
               selfColor={presenceColor}
               selfName={presenceName}
               onNameChange={onPresenceNameChange}
             />
-          )}
-        <div className="flex gap-2" suppressHydrationWarning>
-          {mounted && isAdmin && (
-            <>
-              <button
-                onClick={onShowShareModal}
-                data-tour="share-button"
-                className="px-3 py-1.5 rounded-md bg-[var(--gold)] hover:bg-[var(--gold-deep)] text-white text-sm font-semibold transition-colors"
-                title="Share route"
-              >
-                Share
-              </button>
-              <button
-                onClick={onOpenPlayerModal}
-                data-tour="players-button"
-                className="px-3 py-1.5 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] border border-[var(--border-standard)] text-[var(--text-primary)] text-sm font-semibold transition-colors"
-                title="Manage Players"
-              >
-                Players
-              </button>
-            </>
-          )}
+          </div>
+        <div className="flex gap-2">
+          <button
+            onClick={onShowShareModal}
+            data-tour="share-button"
+            className="px-3 py-1.5 rounded-md bg-[var(--gold)] hover:bg-[var(--gold-deep)] text-white text-sm font-semibold transition-colors"
+            title="Share route"
+            style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}
+          >
+            Share
+          </button>
+          <button
+            onClick={onOpenPlayerModal}
+            data-tour="players-button"
+            className="px-3 py-1.5 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] border border-[var(--border-standard)] text-[var(--text-primary)] text-sm font-semibold transition-colors"
+            title="Manage Players"
+            style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}
+          >
+            Players
+          </button>
           <button
             onClick={() => router.push('/')}
             className="p-1.5 rounded-md hover:bg-[var(--bg-surface)] transition-colors"
@@ -222,15 +219,14 @@ export default function RouteHeader({
             <Home size={18} className="text-[var(--text-tertiary)]" />
           </button>
           <span data-tour="theme-toggle"><ThemeToggle /></span>
-          {mounted && isAdmin && (
-            <button
-              onClick={onStartTour}
-              className="p-1.5 rounded-md hover:bg-[var(--bg-surface)] transition-colors"
-              title="Start guided tour"
-            >
-              <HelpCircle size={18} className="text-[var(--text-tertiary)]" />
-            </button>
-          )}
+          <button
+            onClick={onStartTour}
+            className="p-1.5 rounded-md hover:bg-[var(--bg-surface)] transition-colors"
+            title="Start guided tour"
+            style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}
+          >
+            <HelpCircle size={18} className="text-[var(--text-tertiary)]" />
+          </button>
         </div>
         </div>
       </div>

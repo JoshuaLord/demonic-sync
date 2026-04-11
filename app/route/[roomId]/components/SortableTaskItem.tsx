@@ -17,6 +17,7 @@ export interface SortableTaskItemProps {
   deleteClickedId: string | null;
   cumulativePoints: number;
   cumulativeTasks: number;
+  cumulativePactTasks: number;
   onToggleCheckbox: (stepId: string, playerId: string) => void;
   onDelete: (stepId: string) => void;
   onDeleteClick: (stepId: string) => void;
@@ -34,6 +35,7 @@ const SortableTaskItem = memo(function SortableTaskItem({
   deleteClickedId,
   cumulativePoints,
   cumulativeTasks,
+  cumulativePactTasks,
   onToggleCheckbox,
   onDelete,
   onDeleteClick,
@@ -106,15 +108,15 @@ const SortableTaskItem = memo(function SortableTaskItem({
         isInsertAnimating ? 'animate-task-insert' : ''
       }`}
     >
-      {isAdmin && !isPreviewStep && (
-        <div className="text-[var(--text-tertiary)] group-hover:text-[var(--gold)] flex-shrink-0 transition-colors duration-200 pointer-events-none">
+      {!isPreviewStep && (
+        <div className="text-[var(--text-tertiary)] group-hover:text-[var(--gold)] flex-shrink-0 transition-colors duration-200 pointer-events-none" style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}>
           <GripVertical size={14} />
         </div>
       )}
 
       <div className="flex-1 min-w-0 flex items-center gap-2">
         {step.step_type === 'custom' ? (
-          <div className="text-sm truncate text-[var(--text-primary)] font-medium italic">{step.custom_text}</div>
+          <div className="text-sm text-[var(--text-primary)] font-medium italic whitespace-pre-wrap break-words">{step.custom_text}</div>
         ) : (
           <>
             {step.task_tier && (
@@ -161,6 +163,8 @@ const SortableTaskItem = memo(function SortableTaskItem({
           <span className="text-[var(--crimson)]">{cumulativePoints}</span>
           <span className="text-[var(--text-muted)]">/</span>
           <span className="text-[var(--gold)]">{cumulativeTasks}</span>
+          <span className="text-[var(--text-muted)]">/</span>
+          <span className="text-violet-500">{cumulativePactTasks}</span>
         </div>
       )}
 
@@ -194,7 +198,7 @@ const SortableTaskItem = memo(function SortableTaskItem({
         </div>
       )}
 
-      {mounted && isAdmin && !isPreviewStep && (
+      {!isPreviewStep && (
         <button
           onClick={() => {
             if (deleteClickedId === step.id) {
@@ -210,6 +214,7 @@ const SortableTaskItem = memo(function SortableTaskItem({
           }`}
           title={deleteClickedId === step.id ? 'Click again to confirm' : 'Delete'}
           aria-label={deleteClickedId === step.id ? 'Confirm delete task' : 'Delete task'}
+          style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}
         >
           <Trash2 size={10} className={deleteClickedId === step.id ? 'text-white' : 'text-[var(--text-tertiary)]'} />
         </button>

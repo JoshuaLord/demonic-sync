@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { requireAdminAuth } from '@/lib/auth';
+import { isValidUUID } from '@/lib/validate-admin';
 
 const VALID_STEP_TYPES = new Set(['task', 'custom']);
 
@@ -123,7 +124,7 @@ export async function PATCH(
     case 'update_checkbox': {
       const stepId = body.stepId;
       const playerState = body.playerState;
-      if (!stepId || typeof stepId !== 'string') {
+      if (!stepId || typeof stepId !== 'string' || !isValidUUID(stepId)) {
         return NextResponse.json({ error: 'Invalid step ID' }, { status: 400 });
       }
       if (!playerState || typeof playerState !== 'object' || Array.isArray(playerState)) {
@@ -155,7 +156,7 @@ export async function PATCH(
         return NextResponse.json({ error: 'Too many step updates (max 500)' }, { status: 400 });
       }
       for (const item of stepUpdates) {
-        if (typeof item.id !== 'string' || typeof item.step_order !== 'number' || !Number.isInteger(item.step_order) || item.step_order < 0) {
+        if (typeof item.id !== 'string' || !isValidUUID(item.id) || typeof item.step_order !== 'number' || !Number.isInteger(item.step_order) || item.step_order < 0) {
           return NextResponse.json({ error: 'Invalid step update format' }, { status: 400 });
         }
       }
@@ -192,8 +193,8 @@ export async function DELETE(
   }
 
   const stepId = body.stepId;
-  if (!stepId || typeof stepId !== 'string') {
-    return NextResponse.json({ error: 'Missing step ID' }, { status: 400 });
+  if (!stepId || typeof stepId !== 'string' || !isValidUUID(stepId)) {
+    return NextResponse.json({ error: 'Invalid step ID' }, { status: 400 });
   }
 
   const { error } = await supabaseAdmin

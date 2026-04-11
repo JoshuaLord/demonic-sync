@@ -29,8 +29,8 @@ export async function PATCH(
       if (!name || typeof name !== 'string' || name.trim().length === 0) {
         return NextResponse.json({ error: 'Invalid name' }, { status: 400 });
       }
-      if (name.trim().length > 100) {
-        return NextResponse.json({ error: 'Name too long (max 100 characters)' }, { status: 400 });
+      if (name.trim().length > 50) {
+        return NextResponse.json({ error: 'Name too long (max 50 characters)' }, { status: 400 });
       }
       // TOCTOU defense: only update if admin_key still matches.
       const { error, data } = await supabaseAdmin
@@ -58,17 +58,22 @@ export async function PATCH(
       if (keys.length === 0 || keys.length > 6 || !keys.every(k => VALID_PLAYER_IDS.has(k))) {
         return NextResponse.json({ error: 'Invalid player IDs' }, { status: 400 });
       }
-      // Names must be non-empty strings up to 50 chars (after trim).
-      const values = Object.values(playerNames as Record<string, unknown>);
-      if (!values.every(v => typeof v === 'string' && v.trim().length > 0 && v.length <= 50)) {
+      // Names must be non-empty strings up to 20 chars (after trim).
+      const rawNames = playerNames as Record<string, unknown>;
+      if (!Object.values(rawNames).every(v => typeof v === 'string' && v.trim().length > 0 && v.trim().length <= 20)) {
         return NextResponse.json(
-          { error: 'Player names must be 1-50 characters' },
+          { error: 'Player names must be 1-20 characters' },
           { status: 400 }
         );
       }
+      // Trim names before storage
+      const trimmedNames: Record<string, string> = {};
+      for (const [k, v] of Object.entries(rawNames)) {
+        trimmedNames[k] = (v as string).trim();
+      }
       const { error, data } = await supabaseAdmin
         .from('rooms')
-        .update({ player_names: playerNames })
+        .update({ player_names: trimmedNames })
         .eq('id', roomId)
         .eq('admin_key', adminKey)
         .select('id');

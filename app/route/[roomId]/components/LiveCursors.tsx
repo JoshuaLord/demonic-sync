@@ -26,26 +26,32 @@ export default function LiveCursors({ others }: { others: PresenceUser[] }) {
 
   return (
     <div className="fixed inset-0 pointer-events-none z-[9999]">
-      {others.map((user) => (
-        <div
-          key={user.id}
-          className="absolute"
-          style={{
-            left: user.x,
-            top: user.y,
-            transform: 'translate(-1px, -1px)',
-            transition: 'left 120ms linear, top 120ms linear',
-          }}
-        >
-          <CursorSvg color={user.color} />
+      {others.map((user) => {
+        // Convert percentages to absolute pixels based on current viewport
+        const xPixels = (user.x / 100) * window.innerWidth;
+        const yPixels = (user.y / 100) * window.innerHeight;
+
+        return (
           <div
-            className="absolute left-4 top-4 px-1.5 py-0.5 rounded text-[10px] font-semibold text-white whitespace-nowrap"
-            style={{ backgroundColor: user.color }}
+            key={user.id}
+            className="absolute"
+            style={{
+              left: xPixels,
+              top: yPixels,
+              transform: 'translate(-1px, -1px)',
+              transition: 'left 120ms linear, top 120ms linear',
+            }}
           >
-            {user.name}
+            <CursorSvg color={user.color} />
+            <div
+              className="absolute left-4 top-4 px-1.5 py-0.5 rounded text-[10px] font-semibold text-white whitespace-nowrap"
+              style={{ backgroundColor: user.color }}
+            >
+              {user.name}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

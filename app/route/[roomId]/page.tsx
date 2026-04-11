@@ -2,6 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import RouteClient from './RouteClient';
 
+// Disable caching so the server component always fetches fresh data.
+// Without this, HMR and browser refreshes can serve stale server-rendered
+// HTML that conflicts with client state updated via Realtime, causing
+// hydration errors.
+export const dynamic = 'force-dynamic';
+
 export default async function RoutePage({
   params,
 }: {
