@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Payload size limit for API routes (protects against large request attacks)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
 };
 
 export default nextConfig;

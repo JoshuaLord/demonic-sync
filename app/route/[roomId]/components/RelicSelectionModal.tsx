@@ -235,10 +235,10 @@ export default function RelicSelectionModal({
     <dialog
       ref={dialogRef}
       onClick={handleBackdropClick}
-      className="backdrop:bg-black/80 backdrop:backdrop-blur-sm bg-[var(--bg-base)] border-2 border-[var(--border-strong)] rounded-2xl shadow-2xl p-0 max-w-3xl w-[85vw] max-h-[80vh] overflow-hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0"
+      className="backdrop:bg-black/80 backdrop:backdrop-blur-sm bg-[var(--bg-base)] border-2 border-[var(--border-strong)] rounded-2xl shadow-2xl p-0 max-w-3xl w-[85vw] max-h-[80vh] fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0"
       onClose={onClose}
     >
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col max-h-[80vh]">
         {/* Enhanced Header */}
         <div className="relative flex items-center justify-between px-6 py-5 border-b-2 border-[var(--border-strong)] bg-gradient-to-r from-[var(--bg-elevated)] to-[var(--bg-surface)]">
           <div>

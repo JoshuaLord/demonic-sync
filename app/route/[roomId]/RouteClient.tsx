@@ -40,9 +40,11 @@ import RouteTaskList from './components/RouteTaskList';
 import DragOverlayContent from './components/DragOverlayContent';
 import PlayerModal from './components/PlayerModal';
 import ShareModal from './components/ShareModal';
+import PremiumModal from './components/PremiumModal';
 import LiveCursors from './components/LiveCursors';
 import Tooltip from './components/Tooltip';
 import { usePresence } from './hooks/usePresence';
+import { usePremium } from './hooks/usePremium';
 import { useRouter } from 'next/navigation';
 
 type PlayerNames = Record<string, string>;
@@ -95,6 +97,7 @@ export default function RouteClient({
   const [libraryPosition, setLibraryPosition] = useState<'sidebar' | 'bottom'>('sidebar');
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState<'admin' | 'view' | null>(null);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [libraryWidth, setLibraryWidth] = useState(350);
   const [libraryHeight, setLibraryHeight] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
@@ -124,11 +127,16 @@ export default function RouteClient({
   );
 
   // ──────────────────────────────────────────────
-  // Presence (live cursors) - admin-only.
+  // Premium features (cursor broadcasting)
+  // ──────────────────────────────────────────────
+  const { isPremium, mounted: premiumMounted, unlock } = usePremium();
+
+  // ──────────────────────────────────────────────
+  // Presence (live cursors) - admin-only with premium.
   // Authentication is via the HttpOnly cookie set during sign-in;
   // the hook never sees the raw admin key.
   // ──────────────────────────────────────────────
-  const presence = usePresence(room.id, isAdmin);
+  const presence = usePresence({ roomId: room.id, isAdmin, hasPremium: isPremium });
   const { others: presenceOthers, color: presenceColor, name: presenceName, setName: setPresenceName } = presence;
 
   // ──────────────────────────────────────────────
@@ -208,6 +216,21 @@ export default function RouteClient({
   const handleStartTour = useCallback(() => {
     startTour();
   }, []);
+
+  // ──────────────────────────────────────────────
+  // Premium unlock handlers
+  // ──────────────────────────────────────────────
+  const handleUnlockPremium = useCallback(() => {
+    setShowPremiumModal(true);
+  }, []);
+
+  const handlePremiumUnlock = useCallback(async (code: string): Promise<boolean> => {
+    const isValid = await unlock(code);
+    if (isValid) {
+      setShowPremiumModal(false);
+    }
+    return isValid;
+  }, [unlock]);
 
   // ──────────────────────────────────────────────
   // Real-time subscriptions
@@ -984,6 +1007,7 @@ export default function RouteClient({
         canBroadcast={presence.canBroadcast}
         queuePosition={presence.queuePosition}
         totalAdmins={presence.totalAdmins}
+        hasPremium={isPremium}
       />
 
       <DndContext
@@ -1280,6 +1304,15 @@ export default function RouteClient({
           onCopyAdminLink={copyAdminLink}
           onCopyViewOnlyLink={copyViewOnlyLink}
           onClose={() => setShowShareModal(false)}
+          hasPremium={isPremium}
+          onUnlockPremium={() => setShowPremiumModal(true)}
+        />
+      )}
+
+      {showPremiumModal && (
+        <PremiumModal
+          onClose={() => setShowPremiumModal(false)}
+          onUnlock={handlePremiumUnlock}
         />
       )}
     </div>

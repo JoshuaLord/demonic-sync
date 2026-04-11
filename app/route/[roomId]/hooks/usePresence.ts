@@ -30,10 +30,15 @@ function generateIdentity() {
   };
 }
 
-export function usePresence(
-  roomId: string,
-  isAdmin: boolean
-) {
+export function usePresence({
+  roomId,
+  isAdmin,
+  hasPremium,
+}: {
+  roomId: string;
+  isAdmin: boolean;
+  hasPremium: boolean;
+}) {
   const [others, setOthers] = useState<PresenceUser[]>([]);
   const [ready, setReady] = useState(false);
   const [displayName, setDisplayName] = useState('');
@@ -57,6 +62,8 @@ export function usePresence(
   canBroadcastRef.current = canBroadcast;
   const sessionIdRef = useRef(sessionId);
   sessionIdRef.current = sessionId;
+  const hasPremiumRef = useRef(hasPremium);
+  hasPremiumRef.current = hasPremium;
 
   // Generate identity on mount (client-side only), restoring saved name/color from localStorage
   useEffect(() => {
@@ -74,7 +81,7 @@ export function usePresence(
 
   const broadcastCursor = useCallback(() => {
     const channel = channelRef.current;
-    if (!channel || !identityRef.current || !canBroadcastRef.current) return;
+    if (!channel || !identityRef.current || !canBroadcastRef.current || !hasPremiumRef.current) return;
 
     const now = Date.now();
     // Throttle: 50ms → 100ms for cost reduction
@@ -189,7 +196,7 @@ export function usePresence(
       const xPercent = (e.clientX / window.innerWidth) * 100;
       const yPercent = (e.clientY / window.innerHeight) * 100;
       mouseRef.current = { x: xPercent, y: yPercent };
-      if (canBroadcastRef.current) {
+      if (canBroadcastRef.current && hasPremiumRef.current) {
         broadcastCursor();
       }
     };
@@ -211,7 +218,7 @@ export function usePresence(
     setDisplayName(trimmed);
     localStorage.setItem('presence_name', trimmed);
     const channel = channelRef.current;
-    if (channel && isAdmin && canBroadcast && channel.state === 'joined') {
+    if (channel && isAdmin && canBroadcast && hasPremium && channel.state === 'joined') {
       // Broadcast name change (same mechanism as cursors — reliable)
       channel.send({
         type: 'broadcast',
@@ -228,7 +235,7 @@ export function usePresence(
         color: identityRef.current.color,
       });
     }
-  }, [isAdmin, canBroadcast, sessionId]);
+  }, [isAdmin, canBroadcast, hasPremium, sessionId]);
 
   return {
     others: isAdmin ? others : [], // Viewers don't see cursors

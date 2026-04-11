@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { Waves } from 'lucide-react';
 
 export interface ShareModalProps {
   copiedLink: 'admin' | 'view' | null;
   onCopyAdminLink: () => void;
   onCopyViewOnlyLink: () => void;
   onClose: () => void;
+  hasPremium?: boolean;
+  onUnlockPremium?: () => void;
 }
 
 export default function ShareModal({
@@ -14,6 +17,8 @@ export default function ShareModal({
   onCopyAdminLink,
   onCopyViewOnlyLink,
   onClose,
+  hasPremium = true,
+  onUnlockPremium,
 }: ShareModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -109,7 +114,22 @@ export default function ShareModal({
           </button>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center">
+          {!hasPremium && onUnlockPremium ? (
+            <button
+              onClick={() => {
+                onUnlockPremium();
+                onClose();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] border border-[var(--border-standard)] text-[var(--text-tertiary)] text-xs font-semibold transition-colors"
+              title="Enable live cursor broadcasting"
+            >
+              <Waves className="w-3.5 h-3.5" />
+              Enable Cursors
+            </button>
+          ) : (
+            <div />
+          )}
           <button
             onClick={onClose}
             className="bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] px-4 py-2 rounded-md border border-[var(--border-standard)] text-[var(--text-primary)] text-sm font-semibold transition-colors"

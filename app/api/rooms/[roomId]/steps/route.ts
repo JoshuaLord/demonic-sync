@@ -1,9 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { requireAdminAuth } from '@/lib/auth';
+import { requireAdminAuth, getClientIp } from '@/lib/auth';
 import { isValidUUID } from '@/lib/validate-admin';
 
 const VALID_STEP_TYPES = new Set(['task', 'custom']);
+
+// Rate limiter for task operations: IP → array of timestamps
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = process.env.NODE_ENV === 'production' ? 60 : 1000;
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = rateLimitMap.get(ip) || [];
+  const valid = timestamps.filter(t => now - t < RATE_LIMIT_WINDOW);
+  rateLimitMap.set(ip, valid);
+
+  if (valid.length >= RATE_LIMIT_MAX) {
+    return true;
+  }
+
+  valid.push(now);
+  return false;
+}
+
+// Maximum tasks per room
+const MAX_STEPS_PER_ROOM = 2000;
 
 export async function POST(
   request: NextRequest,
@@ -13,6 +35,28 @@ export async function POST(
 
   const auth = await requireAdminAuth(request, roomId);
   if (!auth.ok) return auth.response;
+
+  // Rate limiting check
+  const ip = getClientIp(request);
+  if (ip !== 'unknown' && isRateLimited(ip)) {
+    return NextResponse.json(
+      { error: 'Too many task operations. Please slow down.' },
+      { status: 429 }
+    );
+  }
+
+  // Check max steps per room
+  const { count } = await supabaseAdmin
+    .from('route_steps')
+    .select('*', { count: 'exact', head: true })
+    .eq('room_id', roomId);
+
+  if (count !== null && count >= MAX_STEPS_PER_ROOM) {
+    return NextResponse.json(
+      { error: `Room has reached maximum of ${MAX_STEPS_PER_ROOM} tasks` },
+      { status: 400 }
+    );
+  }
 
   let body: Record<string, unknown>;
   try {
@@ -111,6 +155,15 @@ export async function PATCH(
   const auth = await requireAdminAuth(request, roomId);
   if (!auth.ok) return auth.response;
 
+  // Rate limiting check
+  const ip = getClientIp(request);
+  if (ip !== 'unknown' && isRateLimited(ip)) {
+    return NextResponse.json(
+      { error: 'Too many task operations. Please slow down.' },
+      { status: 429 }
+    );
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await request.json();
@@ -184,6 +237,15 @@ export async function DELETE(
 
   const auth = await requireAdminAuth(request, roomId);
   if (!auth.ok) return auth.response;
+
+  // Rate limiting check
+  const ip = getClientIp(request);
+  if (ip !== 'unknown' && isRateLimited(ip)) {
+    return NextResponse.json(
+      { error: 'Too many task operations. Please slow down.' },
+      { status: 429 }
+    );
+  }
 
   let body: Record<string, unknown>;
   try {

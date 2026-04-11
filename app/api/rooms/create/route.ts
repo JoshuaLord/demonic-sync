@@ -7,7 +7,7 @@ import crypto from 'crypto';
 const rateLimitMap = new Map<string, number[]>();
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour
 // Higher limit in dev to allow E2E tests to create many rooms
-const RATE_LIMIT_MAX = process.env.NODE_ENV === 'production' ? 10 : 100;
+const RATE_LIMIT_MAX = process.env.NODE_ENV === 'production' ? 5 : 100;
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();

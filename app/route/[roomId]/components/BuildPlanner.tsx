@@ -26,6 +26,8 @@ const nameToFilename = (name: string) => {
     .replace(/^-|-$/g, '');
 };
 
+const RELOADED_RELIC_ID = 19; // ID of the Reloaded relic (Tier 7)
+
 
 export default function BuildPlanner({
   relics,
@@ -37,6 +39,7 @@ export default function BuildPlanner({
   position = 'sidebar',
 }: BuildPlannerProps) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [reloadedModalOpen, setReloadedModalOpen] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState<{
     id: string;
     tier: number;
@@ -57,6 +60,21 @@ export default function BuildPlanner({
   const handleSelect = (id: number | null) => {
     if (selectedMilestone) {
       onMilestoneSelection(selectedMilestone.id, id);
+
+      // Check if Reloaded was just selected
+      if (selectedMilestone.tier === 7 && id === RELOADED_RELIC_ID) {
+        closeModal(); // Close primary modal
+        setTimeout(() => setReloadedModalOpen(true), 100); // Open bonus modal after brief delay
+        return;
+      }
+
+      // Check if changing FROM Reloaded - clear bonus selection
+      const currentSelection = milestoneSelections[selectedMilestone.id];
+      if (selectedMilestone.tier === 7 && currentSelection === RELOADED_RELIC_ID && id !== RELOADED_RELIC_ID) {
+        onMilestoneSelection('relic_reloaded', null); // Clear bonus selection
+      }
+
+      closeModal(); // Normal close for non-Reloaded selections
     }
   };
 
@@ -82,6 +100,19 @@ export default function BuildPlanner({
       .filter((id): id is number => id != null);
   };
   const modalDisabledIds = getDisabledIds();
+
+  // Get available relics for Reloaded selection (T1-T6, excluding already selected ones)
+  const getReloadedOptions = (): OfficialRelic[] => {
+    // Get all T1-T6 relics
+    const availableRelics = relics.filter(r => r.tier >= 1 && r.tier <= 6);
+
+    // Exclude relics already selected in their respective tiers
+    const selectedRelicIds = Object.entries(milestoneSelections)
+      .filter(([key]) => key.startsWith('relic_t'))
+      .map(([_, value]) => value);
+
+    return availableRelics.filter(r => !selectedRelicIds.includes(r.id));
+  };
 
   return (
     <div className="h-full flex flex-col bg-[var(--bg-base)]">
@@ -155,7 +186,17 @@ export default function BuildPlanner({
                     </div>
                     <div className="text-xs truncate">
                       {selectedRelic ? (
-                        <span className="text-[var(--gold)] font-medium">{selectedRelic.name}</span>
+                        <>
+                          <span className="text-[var(--gold)] font-medium">{selectedRelic.name}</span>
+                          {selectedRelic.id === RELOADED_RELIC_ID && milestoneSelections['relic_reloaded'] && (
+                            <>
+                              {' + '}
+                              <span className="text-[var(--gold)]/80 font-medium">
+                                {relics.find(r => r.id === milestoneSelections['relic_reloaded'])?.name || 'Bonus'}
+                              </span>
+                            </>
+                          )}
+                        </>
                       ) : (
                         <span className="text-[var(--text-muted)] italic">Select...</span>
                       )}
@@ -251,6 +292,20 @@ export default function BuildPlanner({
           }
         />
       )}
+
+      {/* Reloaded bonus relic modal */}
+      <RelicSelectionModal
+        isOpen={reloadedModalOpen}
+        onClose={() => setReloadedModalOpen(false)}
+        options={getReloadedOptions()}
+        selectedId={milestoneSelections['relic_reloaded'] || null}
+        onSelect={(id) => {
+          onMilestoneSelection('relic_reloaded', id);
+          setReloadedModalOpen(false);
+        }}
+        isRelic={true}
+        title="Reloaded Bonus - Select from Tiers I-VI"
+      />
     </div>
   );
 }

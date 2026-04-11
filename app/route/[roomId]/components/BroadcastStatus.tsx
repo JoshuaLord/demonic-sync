@@ -6,10 +6,17 @@ type Props = {
   canBroadcast: boolean;
   queuePosition: number;
   totalAdmins: number;
+  hasPremium: boolean;
 };
 
-export default function BroadcastStatus({ canBroadcast, queuePosition, totalAdmins }: Props) {
-  if (totalAdmins === 0) return null;
+export default function BroadcastStatus({
+  canBroadcast,
+  queuePosition,
+  totalAdmins,
+  hasPremium,
+}: Props) {
+  // Don't show anything if no admins or no premium
+  if (totalAdmins === 0 || !hasPremium) return null;
 
   return (
     <div className="flex items-center gap-2 text-sm">
