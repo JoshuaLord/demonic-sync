@@ -222,13 +222,15 @@ export default function RouteHeader({
             <Home size={18} className="text-[var(--text-tertiary)]" />
           </button>
           <span data-tour="theme-toggle"><ThemeToggle /></span>
-          <button
-            onClick={onStartTour}
-            className="p-1.5 rounded-md hover:bg-[var(--bg-surface)] transition-colors"
-            title="Start guided tour"
-          >
-            <HelpCircle size={18} className="text-[var(--text-tertiary)]" />
-          </button>
+          {mounted && isAdmin && (
+            <button
+              onClick={onStartTour}
+              className="p-1.5 rounded-md hover:bg-[var(--bg-surface)] transition-colors"
+              title="Start guided tour"
+            >
+              <HelpCircle size={18} className="text-[var(--text-tertiary)]" />
+            </button>
+          )}
         </div>
         </div>
       </div>

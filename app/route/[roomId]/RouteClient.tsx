@@ -194,16 +194,16 @@ export default function RouteClient({
   }, [mounted, roomName, isAdmin, room.id]);
 
   // ──────────────────────────────────────────────
-  // Guided tour auto-trigger
+  // Guided tour auto-trigger (admin only)
   // ──────────────────────────────────────────────
   useEffect(() => {
-    if (!mounted || tourTriggered.current) return;
+    if (!mounted || !isAdmin || tourTriggered.current) return;
     if (steps.length === 0 && !hasSeenTour()) {
       tourTriggered.current = true;
       const timer = setTimeout(() => startTour(), 500);
       return () => clearTimeout(timer);
     }
-  }, [mounted, steps.length]);
+  }, [mounted, isAdmin, steps.length]);
 
   const handleStartTour = useCallback(() => {
     startTour();

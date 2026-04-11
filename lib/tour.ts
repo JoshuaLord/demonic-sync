@@ -15,42 +15,42 @@ const TOUR_STEPS = [
     element: '[data-tour="route-area"]',
     popover: {
       title: 'Your Route',
-      description: 'This is your route. Tasks you add appear here in order.',
+      description: 'This is your route. Tasks you add appear here in order. Milestones (relics and area unlocks) are automatically injected based on your progress.',
     },
   },
   {
     element: '[data-tour="task-library"]',
     popover: {
-      title: 'Task Library',
-      description: 'Browse 1,589 official OSRS Leagues tasks. Search and filter by tier or region.',
+      title: 'Sidebar Tabs',
+      description: 'Browse 1,589 official tasks in the Library tab, plan your build in Unlocks, or access recent routes. Use the tabs to switch between views.',
     },
   },
   {
     element: '[data-tour="drag-drop-zone"]',
     popover: {
       title: 'Drag & Drop',
-      description: 'Drag tasks from the library into your route, or click the + button.',
+      description: 'Drag tasks from the library into your route, or click the + button. You can also reorder tasks by dragging them within the route.',
     },
   },
   {
     element: '[data-tour="players-button"]',
     popover: {
       title: 'Players',
-      description: 'Add up to 6 players and track completion with checkboxes.',
+      description: 'Add up to 6 players and track completion with checkboxes. Perfect for group planning.',
     },
   },
   {
     element: '[data-tour="share-button"]',
     popover: {
       title: 'Share',
-      description: 'Share your route with friends \u2014 admin or view-only.',
+      description: 'Share your route with admin or view-only links. Updates sync in real-time across all viewers.',
     },
   },
   {
     element: '[data-tour="theme-toggle"]',
     popover: {
       title: 'Theme',
-      description: 'Switch between dark and light mode.',
+      description: 'Switch between dark and light mode. Your preference is saved locally.',
     },
   },
 ];
