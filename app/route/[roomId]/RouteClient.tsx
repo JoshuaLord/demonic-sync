@@ -361,11 +361,15 @@ export default function RouteClient({
   }
 
   async function savePlayers() {
+    const previousPlayerNames = playerNames;
+    setPlayerNames(editingPlayers);
+    setShowPlayerModal(false);
+
     try {
       await apiRoomUpdate(room.id, 'update_players', { playerNames: editingPlayers });
-      setShowPlayerModal(false);
     } catch (err: any) {
       alert('Error saving players: ' + err.message);
+      setPlayerNames(previousPlayerNames);
     }
   }
 
