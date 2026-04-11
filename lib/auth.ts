@@ -51,6 +51,13 @@ export function clearAdminCookies(response: NextResponse, roomId: string) {
  * primary defense; this Origin check is belt-and-suspenders.
  */
 export function checkOrigin(request: NextRequest): boolean {
+  // Safe methods (GET, HEAD, OPTIONS) don't send Origin headers and don't
+  // mutate state, so skip the CSRF check for them.
+  const method = request.method.toUpperCase();
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
+    return true;
+  }
+
   const origin = request.headers.get('origin');
   // Same-origin fetch from our own pages always sends Origin in modern browsers.
   // Missing origin on a state-changing request is suspicious -> reject.
