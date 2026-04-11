@@ -89,6 +89,7 @@ export function usePresence(
     }
 
     lastBroadcastRef.current = now;
+    if (channel.state !== 'joined') return;
     channel.send({
       type: 'broadcast',
       event: 'cursor',
@@ -207,7 +208,7 @@ export function usePresence(
     setDisplayName(trimmed);
     localStorage.setItem('presence_name', trimmed);
     const channel = channelRef.current;
-    if (channel && isAdmin && canBroadcast) {
+    if (channel && isAdmin && canBroadcast && channel.state === 'joined') {
       // Broadcast name change (same mechanism as cursors — reliable)
       channel.send({
         type: 'broadcast',
