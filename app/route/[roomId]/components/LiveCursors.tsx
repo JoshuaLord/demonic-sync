@@ -14,7 +14,7 @@ function CursorSvg({ color }: { color: string }) {
       <path
         d="M0.928 0.640L14.730 10.876C15.182 11.197 14.905 11.907 14.347 11.868L8.355 11.454L5.352 18.587C5.178 19.001 4.635 19.075 4.355 18.722L0.313 1.567C0.167 1.053 0.538 0.363 0.928 0.640Z"
         fill={color}
-        stroke="white"
+        stroke="var(--cursor-stroke)"
         strokeWidth="1.2"
       />
     </svg>

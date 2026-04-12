@@ -1021,7 +1021,7 @@ export default function RouteClient({
       >
         <div className={`flex-1 ${libraryPosition === 'sidebar' ? 'flex' : 'flex flex-col'} overflow-hidden`}>
           {/* Route Pane */}
-          <div data-tour="drag-drop-zone" className={`flex-1 flex flex-col overflow-hidden ${libraryPosition === 'sidebar' ? 'border-r' : 'border-b'} border-[var(--border-standard)]`}>
+          <div data-tour="drag-drop-zone" className={`flex-1 flex flex-col overflow-hidden relative z-10 ${libraryPosition === 'sidebar' ? 'border-r' : 'border-b'} border-[var(--border-standard)]`}>
             <div className={`flex-1 p-4 overflow-y-auto ${steps.length === 0 && !previewStep ? 'flex items-center justify-center' : ''}`}>
               <RouteTaskList
                 steps={stepsWithPreview}

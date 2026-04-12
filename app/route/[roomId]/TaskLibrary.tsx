@@ -70,10 +70,14 @@ const DraggableTaskCard = memo(function DraggableTaskCard({ task, isAdmin, onAdd
       {isAdmin && (
         <button
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             onAddTask(task.id);
           }}
-          className="absolute bottom-1.5 right-1.5 text-emerald-500 hover:text-emerald-400 transition-colors pointer-events-auto z-10"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+          }}
+          className="absolute bottom-1.5 right-1.5 text-emerald-500 hover:text-emerald-400 transition-colors pointer-events-auto z-10 cursor-pointer"
           title="Add to route"
         >
           <Plus size={18} strokeWidth={2.5} />
@@ -85,20 +89,20 @@ const DraggableTaskCard = memo(function DraggableTaskCard({ task, isAdmin, onAdd
         <span
           className={`px-1.5 py-0.5 rounded text-xs font-bold flex-shrink-0 ${
             task.tier === 'Easy'
-              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+              ? 'bg-[var(--tier-easy-bg)] text-[var(--tier-easy-text)]'
               : task.tier === 'Medium'
-              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+              ? 'bg-[var(--tier-medium-bg)] text-[var(--tier-medium-text)]'
               : task.tier === 'Hard'
-              ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+              ? 'bg-[var(--tier-hard-bg)] text-[var(--tier-hard-text)]'
               : task.tier === 'Elite'
-              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-              : 'bg-red-500/10 text-red-600 dark:text-red-400'
+              ? 'bg-[var(--tier-elite-bg)] text-[var(--tier-elite-text)]'
+              : 'bg-[var(--tier-master-bg)] text-[var(--tier-master-text)]'
           }`}
         >
           {task.tier}
         </span>
         {task.is_pact_task && (
-          <span className="px-1.5 py-0.5 rounded text-xs font-bold flex-shrink-0 bg-violet-500/15 text-violet-600 dark:text-violet-400">
+          <span className="px-1.5 py-0.5 rounded text-xs font-bold flex-shrink-0 bg-[var(--pact-bg)] text-[var(--pact-text)]">
             PACT
           </span>
         )}
@@ -378,7 +382,7 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
                     bouncingChip === 'pact-filter' ? 'animate-chip-bounce' : ''
                   } ${
                     showPactOnly
-                      ? 'bg-violet-500 text-white'
+                      ? 'bg-[var(--pact-bar-from)] text-white'
                       : 'bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
                   }`}
                 >

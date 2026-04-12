@@ -5,6 +5,7 @@ import { Trash2, GripVertical } from 'lucide-react';
 import { RouteStep } from '@/types';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import Tooltip from './Tooltip';
 
 type PlayerNames = Record<string, string>;
 
@@ -124,20 +125,20 @@ const SortableTaskItem = memo(function SortableTaskItem({
                 <span
                   className={`w-14 px-1.5 py-0.5 rounded text-xs font-bold flex-shrink-0 text-center ${
                     step.task_tier === 'Easy'
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      ? 'bg-[var(--tier-easy-bg)] text-[var(--tier-easy-text)]'
                       : step.task_tier === 'Medium'
-                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                      ? 'bg-[var(--tier-medium-bg)] text-[var(--tier-medium-text)]'
                       : step.task_tier === 'Hard'
-                      ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                      ? 'bg-[var(--tier-hard-bg)] text-[var(--tier-hard-text)]'
                       : step.task_tier === 'Elite'
-                      ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                      : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                      ? 'bg-[var(--tier-elite-bg)] text-[var(--tier-elite-text)]'
+                      : 'bg-[var(--tier-master-bg)] text-[var(--tier-master-text)]'
                   }`}
                 >
                   {step.task_tier}
                 </span>
                 {step.is_pact_task && (
-                  <span className="px-1 py-0.5 rounded text-[10px] font-bold flex-shrink-0 bg-violet-500/15 text-violet-600 dark:text-violet-400">
+                  <span className="px-1 py-0.5 rounded text-[10px] font-bold flex-shrink-0 bg-[var(--pact-bg)] text-[var(--pact-text)]">
                     PACT
                   </span>
                 )}
@@ -164,7 +165,7 @@ const SortableTaskItem = memo(function SortableTaskItem({
           <span className="text-[var(--text-muted)]">/</span>
           <span className="text-[var(--gold)]">{cumulativeTasks}</span>
           <span className="text-[var(--text-muted)]">/</span>
-          <span className="text-violet-500">{cumulativePactTasks}</span>
+          <span className="text-[var(--pact-text)]">{cumulativePactTasks}</span>
         </div>
       )}
 
@@ -199,25 +200,27 @@ const SortableTaskItem = memo(function SortableTaskItem({
       )}
 
       {!isPreviewStep && (
-        <button
-          onClick={() => {
-            if (deleteClickedId === step.id) {
-              onDelete(step.id);
-            } else {
-              onDeleteClick(step.id);
-            }
-          }}
-          className={`opacity-0 group-hover:opacity-100 transition-all w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${
-            deleteClickedId === step.id
-              ? 'bg-[var(--crimson)] scale-110'
-              : 'bg-[var(--bg-surface)] hover:bg-[var(--crimson)] border border-[var(--border-standard)]'
-          }`}
-          title={deleteClickedId === step.id ? 'Click again to confirm' : 'Delete'}
-          aria-label={deleteClickedId === step.id ? 'Confirm delete task' : 'Delete task'}
-          style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}
-        >
-          <Trash2 size={10} className={deleteClickedId === step.id ? 'text-white' : 'text-[var(--text-tertiary)]'} />
-        </button>
+        <Tooltip text="Double-Click to Remove" position="top">
+          <button
+            onClick={() => {
+              if (deleteClickedId === step.id) {
+                onDelete(step.id);
+              } else {
+                onDeleteClick(step.id);
+              }
+            }}
+            className={`opacity-0 group-hover:opacity-100 transition-all w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${
+              deleteClickedId === step.id
+                ? 'bg-[var(--crimson)] scale-110'
+                : 'bg-[var(--bg-surface)] hover:bg-[var(--crimson)] border border-[var(--border-standard)]'
+            }`}
+            title={deleteClickedId === step.id ? 'Click again to confirm' : 'Delete'}
+            aria-label={deleteClickedId === step.id ? 'Confirm delete task' : 'Delete task'}
+            style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}
+          >
+            <Trash2 size={10} className={deleteClickedId === step.id ? 'text-white' : 'text-[var(--text-tertiary)]'} />
+          </button>
+        </Tooltip>
       )}
     </div>
   );

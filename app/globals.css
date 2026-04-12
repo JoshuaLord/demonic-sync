@@ -46,6 +46,27 @@
   --warning: #ea580c;
   --error: #dc2626;
 
+  /* Tier badge colors */
+  --tier-easy-bg: rgba(16, 185, 129, 0.1);
+  --tier-easy-text: #34d399;
+  --tier-medium-bg: rgba(245, 158, 11, 0.1);
+  --tier-medium-text: #fbbf24;
+  --tier-hard-bg: rgba(249, 115, 22, 0.1);
+  --tier-hard-text: #fb923c;
+  --tier-elite-bg: rgba(168, 85, 247, 0.1);
+  --tier-elite-text: #c084fc;
+  --tier-master-bg: rgba(239, 68, 68, 0.1);
+  --tier-master-text: #f87171;
+
+  /* Pact colors */
+  --pact-bg: rgba(139, 92, 246, 0.15);
+  --pact-text: #a78bfa;
+  --pact-bar-from: #8b5cf6;
+  --pact-bar-to: #a78bfa;
+
+  /* Cursor */
+  --cursor-stroke: #ffffff;
+
   /* Theme-specific */
   --card-shadow: rgba(0, 0, 0, 0.3);
   --checkbox-check: white;
@@ -90,8 +111,29 @@
   --warning: #c2410c;
   --error: #c41e3a;
 
+  /* Tier badge colors - darker for light backgrounds */
+  --tier-easy-bg: rgba(16, 185, 129, 0.12);
+  --tier-easy-text: #059669;
+  --tier-medium-bg: rgba(245, 158, 11, 0.12);
+  --tier-medium-text: #d97706;
+  --tier-hard-bg: rgba(249, 115, 22, 0.12);
+  --tier-hard-text: #ea580c;
+  --tier-elite-bg: rgba(168, 85, 247, 0.12);
+  --tier-elite-text: #7c3aed;
+  --tier-master-bg: rgba(239, 68, 68, 0.12);
+  --tier-master-text: #dc2626;
+
+  /* Pact colors */
+  --pact-bg: rgba(139, 92, 246, 0.12);
+  --pact-text: #7c3aed;
+  --pact-bar-from: #7c3aed;
+  --pact-bar-to: #8b5cf6;
+
+  /* Cursor */
+  --cursor-stroke: #1a1410;
+
   --card-shadow: rgba(0, 0, 0, 0.12);
-  --checkbox-check: #1a1410;
+  --checkbox-check: white;
   --milestone-glow: rgba(196, 30, 58, 0.25);
   --bg-tooltip: #3d3830;
 }

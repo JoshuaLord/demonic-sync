@@ -195,13 +195,13 @@ export default function RouteHeader({
                   <span className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-0.5">
                     Demonic Pacts
                   </span>
-                  <span className="text-xs text-violet-500 font-mono font-bold" suppressHydrationWarning>
+                  <span className="text-xs text-[var(--pact-text)] font-mono font-bold" suppressHydrationWarning>
                     {totalPactPoints}/40 pacts
                   </span>
                 </div>
                 <div className="h-1.5 bg-[var(--bg-surface)] rounded-full overflow-hidden">
                   <div
-                    className={`h-full bg-gradient-to-r from-violet-500 to-violet-400 rounded-full transition-all duration-500 ease-out ${
+                    className={`h-full bg-gradient-to-r from-[var(--pact-bar-from)] to-[var(--pact-bar-to)] rounded-full transition-all duration-500 ease-out ${
                       totalPactPoints >= 36 ? 'animate-pulse' : ''
                     }`}
                     style={{ width: `${Math.min((totalPactPoints / 40) * 100, 100)}%` }}
@@ -218,6 +218,7 @@ export default function RouteHeader({
               selfColor={presenceColor}
               selfName={presenceName}
               onNameChange={onPresenceNameChange}
+              isBroadcasting={canBroadcast}
             />
           </div>
         <div className="flex gap-2">
