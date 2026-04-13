@@ -32,11 +32,11 @@ describe('calculateCumulativeProgress', () => {
     expect(result.tasksAtIndex).toEqual([1, 2, 3]);
   });
 
-  it('counts custom tasks towards task count but not points', () => {
+  it('does not count custom tasks towards task count or points', () => {
     const steps = [task('a', 100), customTask('b'), task('c', 200)];
     const result = calculateCumulativeProgress(steps);
     expect(result.pointsAtIndex).toEqual([100, 100, 300]);
-    expect(result.tasksAtIndex).toEqual([1, 2, 3]);
+    expect(result.tasksAtIndex).toEqual([1, 1, 2]); // Custom task doesn't increment count
   });
 
   it('handles tasks with null/zero points', () => {

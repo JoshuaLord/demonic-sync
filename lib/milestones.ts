@@ -54,12 +54,10 @@ export function calculateCumulativeProgress(steps: RouteStep[]): {
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i];
 
-    // Add points from this task (only for 'task' type steps with points)
+    // Add points and task count from official tasks only
+    // Custom tasks do NOT count towards area unlocks
     if (step.step_type === 'task' && step.task_points) {
       cumulativePoints += step.task_points;
-      cumulativeTasks += 1;
-    } else if (step.step_type === 'custom') {
-      // Custom tasks count towards task count but no points
       cumulativeTasks += 1;
     }
 

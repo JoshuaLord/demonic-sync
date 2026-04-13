@@ -159,7 +159,7 @@ const SortableTaskItem = memo(function SortableTaskItem({
         )}
       </div>
 
-      {!isPreviewStep && (
+      {!isPreviewStep && step.step_type !== 'custom' && (
         <div className="flex-shrink-0 text-xs font-mono font-bold flex items-center gap-1">
           <span className="text-[var(--crimson)]">{cumulativePoints}</span>
           <span className="text-[var(--text-muted)]">/</span>

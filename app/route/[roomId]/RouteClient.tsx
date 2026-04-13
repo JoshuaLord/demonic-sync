@@ -953,14 +953,14 @@ export default function RouteClient({
     const cumulative: Record<string, { points: number; tasks: number; pactTasks: number }> = {};
 
     for (const step of steps) {
+      // Only official tasks count towards points and task count (area unlocks)
+      // Custom tasks do NOT count towards area unlocks
       if (step.step_type === 'task' && step.task_points) {
         points += step.task_points;
         tasks += 1;
         if (step.is_pact_task) {
           pactTasks += 1;
         }
-      } else if (step.step_type === 'custom') {
-        tasks += 1;
       }
       cumulative[step.id] = { points, tasks, pactTasks };
     }
