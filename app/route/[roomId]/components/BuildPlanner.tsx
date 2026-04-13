@@ -61,20 +61,21 @@ export default function BuildPlanner({
     if (selectedMilestone) {
       onMilestoneSelection(selectedMilestone.id, id);
 
-      // Check if Reloaded was just selected
+      // Check if Reloaded was just selected — open the bonus modal
       if (selectedMilestone.tier === 7 && id === RELOADED_RELIC_ID) {
-        closeModal(); // Close primary modal
-        setTimeout(() => setReloadedModalOpen(true), 100); // Open bonus modal after brief delay
+        closeModal();
+        setTimeout(() => setReloadedModalOpen(true), 100);
         return;
       }
 
-      // Check if changing FROM Reloaded - clear bonus selection
-      const currentSelection = milestoneSelections[selectedMilestone.id];
-      if (selectedMilestone.tier === 7 && currentSelection === RELOADED_RELIC_ID && id !== RELOADED_RELIC_ID) {
-        onMilestoneSelection('relic_reloaded', null); // Clear bonus selection
-      }
+      // Note: clearing relic_reloaded when switching FROM Reloaded is
+      // handled atomically inside handleMilestoneSelection (parent) to
+      // avoid race conditions from two concurrent API calls.
 
-      closeModal(); // Normal close for non-Reloaded selections
+      // Only close when making a new selection, not when deselecting (null)
+      if (id !== null) {
+        closeModal();
+      }
     }
   };
 

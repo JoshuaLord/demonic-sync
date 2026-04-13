@@ -105,6 +105,7 @@ export default function RouteClient({
   const [recentRooms, setRecentRooms] = useState<RecentRoom[]>([]);
 
   const tourTriggered = useRef(false);
+  const milestoneUpdateInflight = useRef(0);
 
   // DnD state - inline preview injection
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -293,9 +294,14 @@ export default function RouteClient({
           setMilestonePlayerState(
             (payload.new.milestone_player_state as Record<string, Record<string, boolean>>) || {}
           );
-          setMilestoneSelections(
-            (payload.new.milestone_selections as MilestoneSelections) || {}
-          );
+          // Skip Realtime updates for milestone_selections while our own
+          // API calls are inflight — prevents stale server responses from
+          // overwriting optimistic local state.
+          if (milestoneUpdateInflight.current === 0) {
+            setMilestoneSelections(
+              (payload.new.milestone_selections as MilestoneSelections) || {}
+            );
+          }
           setRoomName(payload.new.name as string);
         }
       )
@@ -311,10 +317,15 @@ export default function RouteClient({
   async function addTask(customText: string) {
     if (!customText.trim()) return;
     try {
-      await apiStepInsert(room.id, {
+      const result = await apiStepInsert(room.id, {
         step_type: 'custom',
         custom_text: customText,
         player_state: {},
+      });
+      const newStep = result.step as RouteStep;
+      setSteps((current) => {
+        if (current.some(s => s.id === newStep.id)) return current;
+        return [...current, newStep].sort((a, b) => a.step_order - b.step_order);
       });
     } catch (err: any) {
       alert('Error adding task: ' + err.message);
@@ -335,7 +346,7 @@ export default function RouteClient({
     }
 
     try {
-      await apiStepInsert(room.id, {
+      const result = await apiStepInsert(room.id, {
         step_type: 'task',
         task_id: taskId,
         task_name: task.name,
@@ -345,6 +356,11 @@ export default function RouteClient({
         task_region: task.region,
         is_pact_task: task.is_pact_task ?? false,
         player_state: {},
+      });
+      const newStep = result.step as RouteStep;
+      setSteps((current) => {
+        if (current.some(s => s.id === newStep.id)) return current;
+        return [...current, newStep].sort((a, b) => a.step_order - b.step_order);
       });
     } catch (err: any) {
       alert('Error adding task: ' + err.message);
@@ -451,19 +467,37 @@ export default function RouteClient({
 
   const handleMilestoneSelection = useCallback(async (milestoneId: string, selectedId: number | null) => {
     if (!isAdmin) return;
-    const updatedSelections = { ...milestoneSelections };
-    if (selectedId === null) delete updatedSelections[milestoneId];
-    else updatedSelections[milestoneId] = selectedId;
 
-    setMilestoneSelections(updatedSelections);
+    const RELOADED_RELIC_ID = 19;
+    let updatedSelections: MilestoneSelections = {};
+    setMilestoneSelections(prev => {
+      const next = { ...prev };
+      if (selectedId === null) delete next[milestoneId];
+      else next[milestoneId] = selectedId;
 
+      // When switching T7 away from Reloaded, clear the bonus selection
+      // atomically in the same update to avoid race conditions.
+      if (
+        milestoneId === 'relic_t7' &&
+        prev['relic_t7'] === RELOADED_RELIC_ID &&
+        selectedId !== RELOADED_RELIC_ID
+      ) {
+        delete next['relic_reloaded'];
+      }
+
+      updatedSelections = next;
+      return next;
+    });
+
+    milestoneUpdateInflight.current++;
     try {
       await apiRoomUpdate(room.id, 'update_milestone_selections', { milestoneSelections: updatedSelections });
     } catch (err: any) {
       alert('Error updating milestone selection: ' + err.message);
-      setMilestoneSelections(milestoneSelections);
+    } finally {
+      milestoneUpdateInflight.current--;
     }
-  }, [isAdmin, milestoneSelections, room.id]);
+  }, [isAdmin, room.id]);
 
   // ──────────────────────────────────────────────
   // Delete

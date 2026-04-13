@@ -166,7 +166,7 @@ const MilestoneRow = memo(function MilestoneRow({
             const checkboxKey = `${milestone.id}-${playerId}`;
             const isBouncing = bouncingCheckbox === checkboxKey;
             return (
-              <div key={playerId} className="w-12 flex justify-center">
+              <div key={playerId} className="w-24 flex justify-center">
                 <input
                   type="checkbox"
                   checked={state}

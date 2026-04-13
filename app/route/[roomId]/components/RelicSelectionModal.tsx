@@ -45,9 +45,15 @@ export default function RelicSelectionModal({
     if (!dialog) return;
 
     if (isOpen) {
-      dialog.showModal();
+      // Prevent calling showModal() if already open
+      if (!dialog.open) {
+        dialog.showModal();
+      }
     } else {
-      dialog.close();
+      // Prevent calling close() if already closed
+      if (dialog.open) {
+        dialog.close();
+      }
     }
   }, [isOpen]);
 
@@ -71,6 +77,10 @@ export default function RelicSelectionModal({
   const handleSelect = (id: number) => {
     const isSelected = id === selectedId;
     onSelect(isSelected ? null : id);
+    // Only auto-close when making a new selection, not when deselecting
+    if (!isSelected) {
+      onClose();
+    }
   };
 
   // Group relics by tier for visual separation

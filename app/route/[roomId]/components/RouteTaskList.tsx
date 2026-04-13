@@ -82,7 +82,7 @@ export default function RouteTaskList({
             {playerIds.map((playerId) => (
               <div
                 key={playerId}
-                className="w-12 text-center text-xs font-bold text-[var(--text-secondary)] truncate"
+                className="w-24 text-center text-xs font-bold text-[var(--text-secondary)] truncate"
               >
                 {playerNames[playerId]}
               </div>
