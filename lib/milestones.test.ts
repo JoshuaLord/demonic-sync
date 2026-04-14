@@ -79,13 +79,13 @@ describe('calculateMilestones', () => {
   });
 
   it('injects relic milestones at correct positions', () => {
-    // Create steps that reach 750 points (Tier 2 threshold)
+    // Create steps that reach 600 points (Tier 2 threshold)
     const steps = [task('a', 400), task('b', 400)]; // 400, 800 cumulative
     const milestones = calculateMilestones(steps);
 
     const relicT2 = milestones.find((m) => m.id === 'relic_t2');
     expect(relicT2).toBeDefined();
-    expect(relicT2!.insertAfterIndex).toBe(1); // After second task (800 >= 750)
+    expect(relicT2!.insertAfterIndex).toBe(1); // After second task (800 >= 600)
     expect(relicT2!.currentProgress).toBe(800);
   });
 
@@ -179,7 +179,7 @@ describe('mergeStepsWithMilestones', () => {
       id: 'relic_t2',
       type: 'relic',
       tier: 2,
-      threshold: 750,
+      threshold: 600,
       label: 'Relic Tier 2',
       insertAfterIndex: 1, // After task 'b'
       currentProgress: 300,
@@ -200,7 +200,7 @@ describe('mergeStepsWithMilestones', () => {
       id: 'relic_t2',
       type: 'relic',
       tier: 2,
-      threshold: 750,
+      threshold: 600,
       label: 'Relic Tier 2',
       insertAfterIndex: 0,
       currentProgress: 5000,
@@ -291,7 +291,7 @@ describe('constants', () => {
   });
 
   it('has correct relic tier thresholds', () => {
-    const expected = [0, 750, 1500, 2500, 5000, 8000, 16000, 25000];
+    const expected = [0, 600, 1500, 2500, 5000, 8000, 16000, 25000];
     expect(RELIC_TIERS.map((t) => t.threshold)).toEqual(expected);
   });
 

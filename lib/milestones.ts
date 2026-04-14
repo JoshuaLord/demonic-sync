@@ -16,7 +16,7 @@ export interface Milestone {
 // Relic tier thresholds (point-based)
 export const RELIC_TIERS = [
   { tier: 1, threshold: 0, label: 'Relic Tier 1' },
-  { tier: 2, threshold: 750, label: 'Relic Tier 2' },
+  { tier: 2, threshold: 600, label: 'Relic Tier 2' },
   { tier: 3, threshold: 1500, label: 'Relic Tier 3' },
   { tier: 4, threshold: 2500, label: 'Relic Tier 4' },
   { tier: 5, threshold: 5000, label: 'Relic Tier 5' },
