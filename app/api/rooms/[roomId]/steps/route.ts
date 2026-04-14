@@ -218,8 +218,8 @@ export async function PATCH(
         step_updates: stepUpdates,
       });
       if (error) {
-        console.error('Error reordering steps:', error);
-        return NextResponse.json({ error: 'Failed to reorder steps' }, { status: 500 });
+        console.error('Error reordering steps:', JSON.stringify(error, null, 2));
+        return NextResponse.json({ error: 'Failed to reorder steps', details: error.message, code: error.code }, { status: 500 });
       }
       return NextResponse.json({ ok: true });
     }

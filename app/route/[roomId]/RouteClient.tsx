@@ -1126,14 +1126,13 @@ export default function RouteClient({
         <div className={`flex-1 ${libraryPosition === 'sidebar' ? 'flex' : 'flex flex-col'} overflow-hidden`}>
           {/* Route Pane */}
           <div data-tour="drag-drop-zone" className={`flex-1 flex flex-col overflow-hidden relative z-10 ${libraryPosition === 'sidebar' ? 'border-r' : 'border-b'} border-[var(--border-standard)]`}>
-            <div className={`flex-1 p-4 overflow-y-auto ${steps.length === 0 && !previewStep ? 'flex items-center justify-center' : ''}`}>
+            <div data-cursor-panel="route" className={`flex-1 p-4 overflow-y-auto ${steps.length === 0 && !previewStep ? 'flex items-center justify-center' : ''}`}>
               <RouteTaskList
                 steps={stepsWithPreview}
                 milestones={milestones}
                 playerIds={playerIds}
                 playerNames={playerNames}
                 isAdmin={isAdmin}
-                mounted={mounted}
                 deleteClickedId={deleteClickedId}
                 cumulativeByStepId={cumulativeByStepId}
                 completedSteps={completedSteps}
@@ -1275,7 +1274,7 @@ export default function RouteClient({
                 </div>
 
                 {/* Content Area */}
-                <div className="flex-1 min-h-0">
+                <div data-cursor-panel="library" className="flex-1 min-h-0 overflow-y-auto">
                   {sidebarTab === 'library' ? (
                     <TaskLibrary
                       roomId={room.id}

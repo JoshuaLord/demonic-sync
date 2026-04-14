@@ -12,10 +12,20 @@ export function useAdminSession(
   roomId: string,
   isAdmin: boolean
 ) {
-  // Eagerly initialize sessionId so it's available on the first render
-  const [sessionId] = useState(() =>
-    Math.random().toString(36).substring(2) + Date.now().toString(36)
-  );
+  // Persist sessionId in sessionStorage so page refreshes reuse the same
+  // session instead of creating ghost entries in the admin queue.
+  const [sessionId] = useState(() => {
+    const storageKey = `admin_session_${roomId}`;
+    if (typeof window !== 'undefined') {
+      const existing = sessionStorage.getItem(storageKey);
+      if (existing) return existing;
+    }
+    const id = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(storageKey, id);
+    }
+    return id;
+  });
   const sessionIdRef = useRef(sessionId);
   const [status, setStatus] = useState<SessionStatus>({
     queuePosition: 0,

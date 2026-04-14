@@ -14,7 +14,6 @@ export interface SortableTaskItemProps {
   playerIds: string[];
   playerNames: PlayerNames;
   isAdmin: boolean;
-  mounted: boolean;
   deleteClickedId: string | null;
   cumulativePoints: number;
   cumulativeTasks: number;
@@ -33,7 +32,6 @@ const SortableTaskItem = memo(function SortableTaskItem({
   playerIds,
   playerNames,
   isAdmin,
-  mounted,
   deleteClickedId,
   cumulativePoints,
   cumulativeTasks,
@@ -139,7 +137,7 @@ const SortableTaskItem = memo(function SortableTaskItem({
       }`}
     >
       {!isPreviewStep && (
-        <div className="text-[var(--text-tertiary)] group-hover:text-[var(--gold)] flex-shrink-0 transition-colors duration-200 pointer-events-none" style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}>
+        <div className="text-[var(--text-tertiary)] group-hover:text-[var(--gold)] flex-shrink-0 transition-colors duration-200 pointer-events-none" style={{ visibility: isAdmin ? 'visible' : 'hidden' }}>
           <GripVertical size={14} />
         </div>
       )}
@@ -239,7 +237,7 @@ const SortableTaskItem = memo(function SortableTaskItem({
             className="opacity-0 group-hover:opacity-100 transition-all w-5 h-5 rounded flex items-center justify-center flex-shrink-0 bg-[var(--bg-surface)] hover:bg-[var(--gold)] border border-[var(--border-standard)]"
             title="Edit custom task"
             aria-label="Edit custom task"
-            style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}
+            style={{ visibility: isAdmin ? 'visible' : 'hidden' }}
           >
             <Pencil size={10} className="text-[var(--text-tertiary)]" />
           </button>
@@ -247,7 +245,7 @@ const SortableTaskItem = memo(function SortableTaskItem({
       )}
 
       {!isPreviewStep && step.step_type !== 'custom' && (
-        <div className="w-5 h-5 flex-shrink-0" style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }} />
+        <div className="w-5 h-5 flex-shrink-0" style={{ visibility: isAdmin ? 'visible' : 'hidden' }} />
       )}
 
       {!isPreviewStep && (
@@ -267,7 +265,7 @@ const SortableTaskItem = memo(function SortableTaskItem({
             }`}
             title={deleteClickedId === step.id ? 'Click again to confirm' : 'Delete'}
             aria-label={deleteClickedId === step.id ? 'Confirm delete task' : 'Delete task'}
-            style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}
+            style={{ visibility: isAdmin ? 'visible' : 'hidden' }}
           >
             <Trash2 size={10} className={deleteClickedId === step.id ? 'text-white' : 'text-[var(--text-tertiary)]'} />
           </button>

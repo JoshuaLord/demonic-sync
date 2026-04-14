@@ -9,8 +9,9 @@ export type PresenceUser = {
   id: string;
   name: string;
   color: string;
-  x: number; // Percentage (0-100)
-  y: number; // Percentage (0-100)
+  x: number;
+  y: number;
+  panel: string | null; // 'route' | 'library' | null
 };
 
 const COLORS = [
@@ -45,11 +46,11 @@ export function usePresence({
   const [displayColor, setDisplayColor] = useState('');
   const channelRef = useRef<RealtimeChannel | null>(null);
   const identityRef = useRef<{ color: string; name: string } | null>(null);
-  const mouseRef = useRef({ x: 0, y: 0 });
+  const mouseRef = useRef<{ x: number; y: number; panel: string | null }>({ x: 0, y: 0, panel: null });
   const lastBroadcastRef = useRef(0);
   const broadcastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Map of session ID -> latest cursor position (from broadcasts)
-  const cursorMapRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+  const cursorMapRef = useRef<Map<string, { x: number; y: number; panel: string | null }>>(new Map());
   // Map of session ID -> broadcast name override (prevents sync from reverting to stale name)
   const nameOverridesRef = useRef<Map<string, string>>(new Map());
 
@@ -104,6 +105,7 @@ export function usePresence({
         id: sessionIdRef.current,
         x: mouseRef.current.x,
         y: mouseRef.current.y,
+        panel: mouseRef.current.panel,
       },
     });
   }, []);
@@ -141,7 +143,7 @@ export function usePresence({
         if (key === sessionId) continue;
         const p = presences[0] as { id?: string; name?: string; color?: string } | undefined;
         if (p?.id && p.name && p.color) {
-          const cursor = cursorMapRef.current.get(p.id) || { x: 0, y: 0 };
+          const cursor = cursorMapRef.current.get(p.id) || { x: 0, y: 0, panel: null };
           const nameOverride = nameOverridesRef.current.get(p.id);
           users.push({
             id: p.id,
@@ -149,6 +151,7 @@ export function usePresence({
             color: p.color,
             x: cursor.x,
             y: cursor.y,
+            panel: cursor.panel,
           });
           // Clear override once presence state has caught up
           if (nameOverride && p.name === nameOverride) {
@@ -162,10 +165,10 @@ export function usePresence({
     // Broadcast: real-time cursor positions
     channel.on('broadcast', { event: 'cursor' }, ({ payload }) => {
       if (!payload || payload.id === sessionId) return;
-      cursorMapRef.current.set(payload.id, { x: payload.x, y: payload.y });
+      cursorMapRef.current.set(payload.id, { x: payload.x, y: payload.y, panel: payload.panel ?? null });
       setOthers((prev) =>
         prev.map((u) =>
-          u.id === payload.id ? { ...u, x: payload.x, y: payload.y } : u
+          u.id === payload.id ? { ...u, x: payload.x, y: payload.y, panel: payload.panel ?? null } : u
         )
       );
     });
@@ -192,10 +195,31 @@ export function usePresence({
     });
 
     const handleMouseMove = (e: MouseEvent) => {
-      // Convert to percentages for viewport-independent positioning
-      const xPercent = (e.clientX / window.innerWidth) * 100;
-      const yPercent = (e.clientY / window.innerHeight) * 100;
-      mouseRef.current = { x: xPercent, y: yPercent };
+      // Find which panel the cursor is over by walking up the DOM
+      let panel: string | null = null;
+      let el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      while (el) {
+        const panelAttr = el.getAttribute('data-cursor-panel');
+        if (panelAttr) {
+          panel = panelAttr;
+          break;
+        }
+        el = el.parentElement;
+      }
+
+      if (panel && el) {
+        // Content-relative coordinates: offset within panel + scroll position
+        const rect = el.getBoundingClientRect();
+        const x = e.clientX - rect.left + el.scrollLeft;
+        const y = e.clientY - rect.top + el.scrollTop;
+        mouseRef.current = { x, y, panel };
+      } else {
+        // Outside any panel — use viewport percentages as fallback
+        const xPercent = (e.clientX / window.innerWidth) * 100;
+        const yPercent = (e.clientY / window.innerHeight) * 100;
+        mouseRef.current = { x: xPercent, y: yPercent, panel: null };
+      }
+
       if (canBroadcastRef.current && hasPremiumRef.current) {
         broadcastCursor();
       }

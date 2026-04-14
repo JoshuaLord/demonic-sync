@@ -19,7 +19,6 @@ export interface RouteTaskListProps {
   playerIds: string[];
   playerNames: PlayerNames;
   isAdmin: boolean;
-  mounted: boolean;
   deleteClickedId: string | null;
   cumulativeByStepId: Record<string, { points: number; tasks: number; pactTasks: number }>;
   completedSteps: Set<string>;
@@ -44,7 +43,6 @@ export default function RouteTaskList({
   playerIds,
   playerNames,
   isAdmin,
-  mounted,
   deleteClickedId,
   cumulativeByStepId,
   completedSteps,
@@ -69,11 +67,11 @@ export default function RouteTaskList({
   const realSteps = previewStepId ? steps.filter(s => s.id !== previewStepId) : steps;
 
   return (
-    <div className="flex flex-col gap-2" data-tour="route-area" suppressHydrationWarning>
+    <div className="flex flex-col gap-2" data-tour="route-area">
       {/* Column Headers */}
       {playerIds.length > 0 && steps.length > 0 && (
-        <div className="flex gap-2 items-center mb-3 pb-2 border-b border-[var(--border-subtle)]" suppressHydrationWarning>
-          <div className="w-[14px] flex-shrink-0" style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}></div>
+        <div className="flex gap-2 items-center mb-3 pb-2 border-b border-[var(--border-subtle)]">
+          <div className="w-[14px] flex-shrink-0" style={{ visibility: isAdmin ? 'visible' : 'hidden' }}></div>
           <div className="flex-1 text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-wide">
             Task
           </div>
@@ -91,8 +89,8 @@ export default function RouteTaskList({
               </div>
             ))}
           </div>
-          <div className="w-5 flex-shrink-0" style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}></div>
-          <div className="w-5 flex-shrink-0" style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}></div>
+          <div className="w-5 flex-shrink-0" style={{ visibility: isAdmin ? 'visible' : 'hidden' }}></div>
+          <div className="w-5 flex-shrink-0" style={{ visibility: isAdmin ? 'visible' : 'hidden' }}></div>
         </div>
       )}
 
@@ -111,7 +109,7 @@ export default function RouteTaskList({
               relics={relics}
               regions={regions}
               isAdmin={isAdmin}
-              mounted={mounted}
+
               onToggleMilestoneCheckbox={onToggleMilestoneCheckbox}
               onMilestoneSelection={onMilestoneSelection}
             />
@@ -134,7 +132,7 @@ export default function RouteTaskList({
                   playerIds={playerIds}
                   playerNames={playerNames}
                   isAdmin={isAdmin}
-                  mounted={mounted}
+    
                   deleteClickedId={deleteClickedId}
                   cumulativePoints={cumulative.points}
                   cumulativeTasks={cumulative.tasks}
@@ -158,7 +156,7 @@ export default function RouteTaskList({
                     relics={relics}
                     regions={regions}
                     isAdmin={isAdmin}
-                    mounted={mounted}
+      
                     onToggleMilestoneCheckbox={onToggleMilestoneCheckbox}
                     onMilestoneSelection={onMilestoneSelection}
                   />

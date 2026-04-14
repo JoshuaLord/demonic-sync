@@ -116,7 +116,7 @@ export default function RouteHeader({
                     onClick={onStartEditingName}
                     className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-[var(--bg-surface)] rounded"
                     title="Edit route name"
-                    style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}
+                    style={{ visibility: isAdmin ? 'visible' : 'hidden' }}
                   >
                     <Pencil size={16} className="text-[var(--text-tertiary)]" />
                   </button>
@@ -125,12 +125,12 @@ export default function RouteHeader({
                 <div className="flex items-center gap-3 mt-1.5">
                   <div className="flex items-center gap-2 px-2 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border-standard)]">
                     <div className={`w-1.5 h-1.5 rounded-full ${isAdmin ? 'bg-[var(--gold)]' : 'bg-[var(--steel)]'}`}></div>
-                    <span className="text-xs font-semibold text-[var(--text-secondary)]" suppressHydrationWarning>
-                      {mounted ? (isAdmin ? 'ADMIN' : 'VIEW-ONLY') : ''}
+                    <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                      {isAdmin ? 'ADMIN' : 'VIEW-ONLY'}
                     </span>
                   </div>
 
-                  <div style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}>
+                  <div style={{ visibility: isAdmin ? 'visible' : 'hidden' }}>
                     <BroadcastStatus
                       canBroadcast={canBroadcast}
                       queuePosition={queuePosition}
@@ -227,7 +227,7 @@ export default function RouteHeader({
             data-tour="share-button"
             className="px-3 py-1.5 rounded-md bg-[var(--gold)] hover:bg-[var(--gold-deep)] text-white text-sm font-semibold transition-colors"
             title="Share route"
-            style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}
+            style={{ visibility: isAdmin ? 'visible' : 'hidden' }}
           >
             Share
           </button>
@@ -236,7 +236,7 @@ export default function RouteHeader({
             data-tour="players-button"
             className="px-3 py-1.5 rounded-md bg-[var(--bg-surface)} hover:bg-[var(--bg-hover)] border border-[var(--border-standard)] text-[var(--text-primary)] text-sm font-semibold transition-colors"
             title="Manage Players"
-            style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}
+            style={{ visibility: isAdmin ? 'visible' : 'hidden' }}
           >
             Players
           </button>
@@ -282,7 +282,7 @@ export default function RouteHeader({
                   )}
                 </button>
 
-                {mounted && isAdmin && (
+                {isAdmin && (
                   <button
                     onClick={() => {
                       onStartTour();

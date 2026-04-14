@@ -15,7 +15,7 @@ async function getQueueStatus(roomId: string, sessionId: string) {
     .from('realtime_admin_sessions')
     .select('session_id, joined_at')
     .eq('room_id', roomId)
-    .gte('last_heartbeat', new Date(Date.now() - 5 * 60 * 1000).toISOString())
+    .gte('last_heartbeat', new Date(Date.now() - 90 * 1000).toISOString())
     .order('joined_at', { ascending: true });
 
   const queuePosition = (sessions?.findIndex(s => s.session_id === sessionId) ?? -1) + 1;
