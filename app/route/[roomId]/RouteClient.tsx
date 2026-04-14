@@ -41,6 +41,9 @@ import DragOverlayContent from './components/DragOverlayContent';
 import PlayerModal from './components/PlayerModal';
 import ShareModal from './components/ShareModal';
 import PremiumModal from './components/PremiumModal';
+import TaskContextMenu from './components/TaskContextMenu';
+import AddCustomTaskModal from './components/AddCustomTaskModal';
+import AddLibraryTaskModal from './components/AddLibraryTaskModal';
 import LiveCursors from './components/LiveCursors';
 import Tooltip from './components/Tooltip';
 import { usePresence } from './hooks/usePresence';
@@ -104,6 +107,10 @@ export default function RouteClient({
   const [isResizing, setIsResizing] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<'library' | 'unlocks' | 'routes'>('library');
   const [recentRooms, setRecentRooms] = useState<RecentRoom[]>([]);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; stepId: string } | null>(null);
+  const [showCustomTaskModal, setShowCustomTaskModal] = useState(false);
+  const [showLibraryTaskModal, setShowLibraryTaskModal] = useState(false);
+  const [contextStepId, setContextStepId] = useState<string | null>(null);
 
   const tourTriggered = useRef(false);
   const milestoneUpdateInflight = useRef(0);
@@ -594,6 +601,109 @@ export default function RouteClient({
 
   function cancelCustomTaskEdit() {
     setEditingCustomTask(null);
+  }
+
+  // ──────────────────────────────────────────────
+  // Context menu (right-click insert)
+  // ──────────────────────────────────────────────
+  const handleTaskContextMenu = useCallback((e: React.MouseEvent, stepId: string) => {
+    if (!isAdmin) return;
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, stepId });
+  }, [isAdmin]);
+
+  const handleContextMenuCustom = useCallback(() => {
+    if (!contextMenu) return;
+    setContextStepId(contextMenu.stepId);
+    setContextMenu(null);
+    setShowCustomTaskModal(true);
+  }, [contextMenu]);
+
+  const handleContextMenuLibrary = useCallback(() => {
+    if (!contextMenu) return;
+    setContextStepId(contextMenu.stepId);
+    setContextMenu(null);
+    setShowLibraryTaskModal(true);
+  }, [contextMenu]);
+
+  async function insertCustomTaskAtPosition(text: string, position: 'above' | 'below') {
+    if (!contextStepId) return;
+    setShowCustomTaskModal(false);
+
+    try {
+      const result = await apiStepInsert(room.id, {
+        step_type: 'custom',
+        custom_text: text,
+        player_state: {},
+      });
+      const newStep = result.step as RouteStep;
+
+      // Calculate target index
+      const refIndex = steps.findIndex(s => s.id === contextStepId);
+      if (refIndex < 0) return;
+      const targetIndex = position === 'above' ? refIndex : refIndex + 1;
+
+      // Insert at position optimistically
+      const updatedSteps = [...steps];
+      updatedSteps.splice(targetIndex, 0, newStep);
+      setSteps(updatedSteps);
+
+      // Animate
+      setInsertAnimatingIds(prev => new Set(prev).add(newStep.id));
+      setTimeout(() => {
+        setInsertAnimatingIds(prev => { const next = new Set(prev); next.delete(newStep.id); return next; });
+      }, 400);
+
+      // Persist order
+      const updates = updatedSteps.map((step, index) => ({ id: step.id, step_order: index }));
+      await apiStepUpdate(room.id, 'reorder', { stepUpdates: updates });
+    } catch (err: any) {
+      alert('Error inserting task: ' + err.message);
+    }
+    setContextStepId(null);
+  }
+
+  async function insertLibraryTaskAtPosition(task: { id: number; name: string; description?: string | null; tier: string; points: number; region: string; is_pact_task: boolean }, position: 'above' | 'below') {
+    if (!contextStepId) return;
+    setShowLibraryTaskModal(false);
+
+    try {
+      const result = await apiStepInsert(room.id, {
+        step_type: 'task',
+        task_id: task.id,
+        task_name: task.name,
+        task_description: task.description || null,
+        task_tier: task.tier,
+        task_points: task.points,
+        task_region: task.region,
+        is_pact_task: task.is_pact_task ?? false,
+        player_state: {},
+      });
+      const newStep = result.step as RouteStep;
+
+      // Calculate target index
+      const refIndex = steps.findIndex(s => s.id === contextStepId);
+      if (refIndex < 0) return;
+      const targetIndex = position === 'above' ? refIndex : refIndex + 1;
+
+      // Insert at position optimistically
+      const updatedSteps = [...steps];
+      updatedSteps.splice(targetIndex, 0, newStep);
+      setSteps(updatedSteps);
+
+      // Animate
+      setInsertAnimatingIds(prev => new Set(prev).add(newStep.id));
+      setTimeout(() => {
+        setInsertAnimatingIds(prev => { const next = new Set(prev); next.delete(newStep.id); return next; });
+      }, 400);
+
+      // Persist order
+      const updates = updatedSteps.map((step, index) => ({ id: step.id, step_order: index }));
+      await apiStepUpdate(room.id, 'reorder', { stepUpdates: updates });
+    } catch (err: any) {
+      alert('Error inserting task: ' + err.message);
+    }
+    setContextStepId(null);
   }
 
   // ──────────────────────────────────────────────
@@ -1146,6 +1256,7 @@ export default function RouteClient({
                 onDelete={deleteTask}
                 onDeleteClick={handleDeleteClick}
                 onEdit={handleEditCustomTask}
+                onTaskContextMenu={handleTaskContextMenu}
                 onToggleMilestoneCheckbox={toggleMilestoneCheckbox}
                 onMilestoneSelection={handleMilestoneSelection}
               />
@@ -1417,6 +1528,31 @@ export default function RouteClient({
         <PremiumModal
           onClose={() => setShowPremiumModal(false)}
           onUnlock={handlePremiumUnlock}
+        />
+      )}
+
+      {contextMenu && (
+        <TaskContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          onAddCustomTask={handleContextMenuCustom}
+          onAddLibraryTask={handleContextMenuLibrary}
+        />
+      )}
+
+      {showCustomTaskModal && (
+        <AddCustomTaskModal
+          onClose={() => { setShowCustomTaskModal(false); setContextStepId(null); }}
+          onInsert={insertCustomTaskAtPosition}
+        />
+      )}
+
+      {showLibraryTaskModal && (
+        <AddLibraryTaskModal
+          onClose={() => { setShowLibraryTaskModal(false); setContextStepId(null); }}
+          onInsert={insertLibraryTaskAtPosition}
+          routeSteps={steps}
         />
       )}
 

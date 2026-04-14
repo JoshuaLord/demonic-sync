@@ -33,6 +33,7 @@ export interface RouteTaskListProps {
   onDelete: (stepId: string) => void;
   onDeleteClick: (stepId: string) => void;
   onEdit?: (stepId: string, currentText: string) => void;
+  onTaskContextMenu?: (e: React.MouseEvent, stepId: string) => void;
   onToggleMilestoneCheckbox: (milestoneId: string, playerId: string) => void;
   onMilestoneSelection: (milestoneId: string, selectedId: number | null) => void;
 }
@@ -56,6 +57,7 @@ export default function RouteTaskList({
   onDelete,
   onDeleteClick,
   onEdit,
+  onTaskContextMenu,
   onToggleMilestoneCheckbox,
   onMilestoneSelection,
 }: RouteTaskListProps) {
@@ -141,6 +143,7 @@ export default function RouteTaskList({
                   onDelete={onDelete}
                   onDeleteClick={onDeleteClick}
                   onEdit={onEdit}
+                  onContextMenu={onTaskContextMenu}
                   completedSteps={completedSteps}
                   isInsertAnimating={insertAnimatingIds.has(step.id)}
                   isPreviewStep={isPreview}

@@ -22,6 +22,7 @@ export interface SortableTaskItemProps {
   onDelete: (stepId: string) => void;
   onDeleteClick: (stepId: string) => void;
   onEdit?: (stepId: string, currentText: string) => void;
+  onContextMenu?: (e: React.MouseEvent, stepId: string) => void;
   completedSteps: Set<string>;
   isInsertAnimating?: boolean;
   isPreviewStep?: boolean;
@@ -40,6 +41,7 @@ const SortableTaskItem = memo(function SortableTaskItem({
   onDelete,
   onDeleteClick,
   onEdit,
+  onContextMenu,
   completedSteps,
   isInsertAnimating,
   isPreviewStep,
@@ -112,6 +114,7 @@ const SortableTaskItem = memo(function SortableTaskItem({
       ref={setNodeRef}
       style={style}
       data-testid="route-task-item"
+      onContextMenu={!isPreviewStep && onContextMenu ? (e) => onContextMenu(e, step.id) : undefined}
       {...(isPreviewStep ? {} : attributes)}
       {...(isPreviewStep ? {} : listeners)}
       className={`rounded-md p-1.5 flex gap-2 items-center group ${
