@@ -43,6 +43,9 @@ const MilestoneRow = memo(function MilestoneRow({
   }, [onToggleMilestoneCheckbox]);
 
   const isRelic = milestone.type === 'relic';
+  const isKaramja = milestone.type === 'karamja';
+  const isArea = milestone.type === 'area';
+
   const thresholdText = isRelic
     ? `${milestone.threshold} pts`
     : `${milestone.threshold} tasks`;
@@ -87,7 +90,7 @@ const MilestoneRow = memo(function MilestoneRow({
       <div className="w-[14px] flex-shrink-0" style={{ visibility: isAdmin ? 'visible' : 'hidden' }}></div>
 
       <div className="flex-1 min-w-0 flex items-center gap-2">
-        {!isRelic && (
+        {(isArea || isKaramja) && (
           <div className="flex-shrink-0 w-6 h-6 rounded bg-gradient-to-br from-[var(--gold)] to-[var(--gold-deep)] flex items-center justify-center text-xs">
             🗺
           </div>
@@ -106,26 +109,36 @@ const MilestoneRow = memo(function MilestoneRow({
         </span>
 
         <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={() => setModalOpen(true)}
-            disabled={!isAdmin}
-            aria-label={`Select ${isRelic ? 'relic' : 'region'} for ${milestone.label}`}
-            className="flex items-center gap-1.5 bg-[var(--bg-surface)] border border-[var(--border-standard)] rounded-md px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:border-[var(--gold)] focus:outline-none focus:border-[var(--gold)]"
-          >
-            <span className={selectedItem ? 'text-[var(--gold)]' : 'text-[var(--text-tertiary)]'}>
-              {selectedItem ? selectedItem.name : placeholder}
-            </span>
-          </button>
+          {/* Karamja shows as non-editable text */}
+          {isKaramja ? (
+            <div className="flex items-center gap-1.5 bg-[var(--bg-surface)] border border-[var(--border-standard)] rounded-md px-2.5 py-1 text-xs font-semibold">
+              <span className="text-[var(--gold)]">Karamja (Auto-unlocked)</span>
+            </div>
+          ) : (
+            <>
+              {/* Regular relic/area selection button */}
+              <button
+                onClick={() => setModalOpen(true)}
+                disabled={!isAdmin}
+                aria-label={`Select ${isRelic ? 'relic' : 'region'} for ${milestone.label}`}
+                className="flex items-center gap-1.5 bg-[var(--bg-surface)] border border-[var(--border-standard)] rounded-md px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:border-[var(--gold)] focus:outline-none focus:border-[var(--gold)]"
+              >
+                <span className={selectedItem ? 'text-[var(--gold)]' : 'text-[var(--text-tertiary)]'}>
+                  {selectedItem ? selectedItem.name : placeholder}
+                </span>
+              </button>
 
-          <RelicSelectionModal
-            isOpen={modalOpen}
-            onClose={() => setModalOpen(false)}
-            options={options}
-            selectedId={selectedId}
-            onSelect={(id) => onMilestoneSelection(milestone.id, id)}
-            isRelic={isRelic}
-            title={isRelic ? `Select Relic - ${milestone.label}` : `Select Region - ${milestone.label}`}
-          />
+              <RelicSelectionModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                options={options}
+                selectedId={selectedId}
+                onSelect={(id) => onMilestoneSelection(milestone.id, id)}
+                isRelic={isRelic}
+                title={isRelic ? `Select Relic - ${milestone.label}` : `Select Region - ${milestone.label}`}
+              />
+            </>
+          )}
 
           {/* Reloaded bonus selection */}
           {isReloadedSelected && (

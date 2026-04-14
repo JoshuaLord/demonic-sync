@@ -1,13 +1,13 @@
 // Milestone calculation and injection logic
 
-export type MilestoneType = 'relic' | 'area';
+export type MilestoneType = 'relic' | 'area' | 'karamja';
 
 export interface Milestone {
-  id: string; // Unique ID for React keys (e.g., 'relic_t2', 'area_u1')
+  id: string; // Unique ID for React keys (e.g., 'relic_t2', 'area_u1', 'karamja')
   type: MilestoneType;
-  tier: number; // Relic tier (1-8) or Area unlock (1-3)
+  tier: number; // Relic tier (1-8), Area unlock (1-3), or 0 for Karamja
   threshold: number; // Points or task count required
-  label: string; // Display name (e.g., 'Relic Tier 2', 'Area Unlock 1')
+  label: string; // Display name (e.g., 'Relic Tier 2', 'Area Unlock 1', 'Starter Area')
   insertAfterIndex: number; // Insert milestone after this task index (-1 = before first task)
   currentProgress: number; // Current points/tasks at this position
   isReached: boolean; // Whether threshold is met
@@ -24,6 +24,12 @@ export const RELIC_TIERS = [
   { tier: 7, threshold: 16000, label: 'Relic Tier 7' },
   { tier: 8, threshold: 25000, label: 'Relic Tier 8' },
 ];
+
+// Karamja starter area (task-count-based, auto-unlocked)
+export const KARAMJA_UNLOCK = {
+  threshold: 80,
+  label: 'Starter Area',
+};
 
 // Area unlock thresholds (task-count-based)
 export const AREA_UNLOCKS = [
@@ -111,6 +117,24 @@ export function calculateMilestones(steps: RouteStep[]): Milestone[] {
     }
   }
 
+  // Find where to inject Karamja starter area milestone
+  // Only add if reached (80 tasks completed)
+  for (let i = 0; i < tasksAtIndex.length; i++) {
+    if (tasksAtIndex[i] >= KARAMJA_UNLOCK.threshold) {
+      milestones.push({
+        id: 'karamja',
+        type: 'karamja',
+        tier: 0, // Special tier for Karamja (not part of the 3 area unlocks)
+        threshold: KARAMJA_UNLOCK.threshold,
+        label: KARAMJA_UNLOCK.label,
+        insertAfterIndex: i,
+        currentProgress: tasksAtIndex[i],
+        isReached: true,
+      });
+      break; // Only add once when reached
+    }
+  }
+
   // Find where to inject area unlock milestones
   // Only add milestones that have been reached
   for (const areaUnlock of AREA_UNLOCKS) {
@@ -188,5 +212,5 @@ export function mergeStepsWithMilestones<T extends RouteStep>(
  * Type guard to check if an item is a milestone
  */
 export function isMilestone(item: any): item is Milestone {
-  return item && 'type' in item && (item.type === 'relic' || item.type === 'area');
+  return item && 'type' in item && (item.type === 'relic' || item.type === 'area' || item.type === 'karamja');
 }
