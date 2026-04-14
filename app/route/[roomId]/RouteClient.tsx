@@ -98,6 +98,7 @@ export default function RouteClient({
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState<'admin' | 'view' | null>(null);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [editingCustomTask, setEditingCustomTask] = useState<{ stepId: string; text: string } | null>(null);
   const [libraryWidth, setLibraryWidth] = useState(350);
   const [libraryHeight, setLibraryHeight] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
@@ -217,6 +218,33 @@ export default function RouteClient({
   const handleStartTour = useCallback(() => {
     startTour();
   }, []);
+
+  // ──────────────────────────────────────────────
+  // Dynamic player column widths
+  // ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!mounted) return;
+
+    const playerIds = Object.keys(playerNames);
+    const MIN_WIDTH = 48; // Minimum width in pixels (3rem)
+    const CHAR_WIDTH = 8; // Approximate character width in pixels
+    const PADDING = 24; // Padding for checkbox + spacing
+
+    playerIds.forEach((playerId, index) => {
+      const name = playerNames[playerId] || playerId;
+      // Truncate to 12 characters for width calculation
+      const truncatedName = name.slice(0, 12);
+      const calculatedWidth = Math.max(
+        MIN_WIDTH,
+        truncatedName.length * CHAR_WIDTH + PADDING
+      );
+
+      document.documentElement.style.setProperty(
+        `--player-${index + 1}-width`,
+        `${calculatedWidth}px`
+      );
+    });
+  }, [mounted, playerNames]);
 
   // ──────────────────────────────────────────────
   // Premium unlock handlers
@@ -525,6 +553,48 @@ export default function RouteClient({
     setDeleteClickedId(stepId);
     setTimeout(() => setDeleteClickedId(null), 2000);
   }, []);
+
+  // ──────────────────────────────────────────────
+  // Custom task editing
+  // ──────────────────────────────────────────────
+  const handleEditCustomTask = useCallback((stepId: string, currentText: string) => {
+    if (!isAdmin) return;
+    setEditingCustomTask({ stepId, text: currentText });
+  }, [isAdmin]);
+
+  async function saveCustomTaskEdit() {
+    if (!editingCustomTask || !isAdmin) return;
+    const trimmedText = editingCustomTask.text.trim();
+    if (!trimmedText || trimmedText.length > 500) return;
+
+    // Optimistic update
+    setSteps(prev => prev.map(s =>
+      s.id === editingCustomTask.stepId
+        ? { ...s, custom_text: trimmedText }
+        : s
+    ));
+    setEditingCustomTask(null);
+
+    try {
+      await apiStepUpdate(room.id, 'update_custom_text', {
+        stepId: editingCustomTask.stepId,
+        customText: trimmedText,
+      });
+    } catch (err: any) {
+      alert('Error updating custom task: ' + err.message);
+      // Revert on error by refetching
+      const { data } = await supabase
+        .from('route_steps')
+        .select('*')
+        .eq('room_id', room.id)
+        .order('step_order', { ascending: true });
+      setSteps(data || []);
+    }
+  }
+
+  function cancelCustomTaskEdit() {
+    setEditingCustomTask(null);
+  }
 
   // ──────────────────────────────────────────────
   // Room name editing
@@ -1076,6 +1146,7 @@ export default function RouteClient({
                 onToggleCheckbox={toggleCheckbox}
                 onDelete={deleteTask}
                 onDeleteClick={handleDeleteClick}
+                onEdit={handleEditCustomTask}
                 onToggleMilestoneCheckbox={toggleMilestoneCheckbox}
                 onMilestoneSelection={handleMilestoneSelection}
               />
@@ -1348,6 +1419,44 @@ export default function RouteClient({
           onClose={() => setShowPremiumModal(false)}
           onUnlock={handlePremiumUnlock}
         />
+      )}
+
+      {editingCustomTask && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg p-6 w-[400px] shadow-2xl">
+            <h2 className="text-xl font-bold mb-4 text-[var(--text-primary)]">
+              Edit Custom Task
+            </h2>
+            <textarea
+              value={editingCustomTask.text}
+              onChange={(e) => setEditingCustomTask({ ...editingCustomTask, text: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveCustomTaskEdit(); }
+                if (e.key === 'Escape') cancelCustomTaskEdit();
+              }}
+              placeholder="Enter task description..."
+              maxLength={500}
+              rows={3}
+              autoFocus
+              className="w-full bg-[var(--bg-surface)] border border-[var(--border-standard)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--gold)] transition-colors mb-4 resize-y min-h-[4.5rem]"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={cancelCustomTaskEdit}
+                className="bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] px-4 py-2 rounded-md border border-[var(--border-standard)] text-[var(--text-secondary)] text-sm font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveCustomTaskEdit}
+                disabled={!editingCustomTask.text.trim() || editingCustomTask.text.length > 500}
+                className="bg-[var(--crimson)] hover:bg-[var(--crimson-deep)] px-4 py-2 rounded-md text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

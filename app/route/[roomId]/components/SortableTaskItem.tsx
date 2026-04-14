@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useState, useCallback } from 'react';
-import { Trash2, GripVertical } from 'lucide-react';
+import { Trash2, GripVertical, Pencil } from 'lucide-react';
 import { RouteStep } from '@/types';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -22,6 +22,7 @@ export interface SortableTaskItemProps {
   onToggleCheckbox: (stepId: string, playerId: string) => void;
   onDelete: (stepId: string) => void;
   onDeleteClick: (stepId: string) => void;
+  onEdit?: (stepId: string, currentText: string) => void;
   completedSteps: Set<string>;
   isInsertAnimating?: boolean;
   isPreviewStep?: boolean;
@@ -40,11 +41,14 @@ const SortableTaskItem = memo(function SortableTaskItem({
   onToggleCheckbox,
   onDelete,
   onDeleteClick,
+  onEdit,
   completedSteps,
   isInsertAnimating,
   isPreviewStep,
 }: SortableTaskItemProps) {
   const [bouncingCheckbox, setBouncingCheckbox] = useState<string | null>(null);
+  const [editClickCount, setEditClickCount] = useState(0);
+  const [editClickTimeout, setEditClickTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const handleCheckboxToggle = useCallback((stepId: string, playerId: string) => {
     const checkboxKey = `${stepId}-${playerId}`;
@@ -52,6 +56,31 @@ const SortableTaskItem = memo(function SortableTaskItem({
     onToggleCheckbox(stepId, playerId);
     setTimeout(() => setBouncingCheckbox(null), 400);
   }, [onToggleCheckbox]);
+
+  const handleEditClick = useCallback(() => {
+    if (!onEdit || step.step_type !== 'custom' || !step.custom_text) return;
+
+    if (editClickTimeout) {
+      clearTimeout(editClickTimeout);
+    }
+
+    const newCount = editClickCount + 1;
+    setEditClickCount(newCount);
+
+    if (newCount === 2) {
+      // Double click detected
+      onEdit(step.id, step.custom_text);
+      setEditClickCount(0);
+      setEditClickTimeout(null);
+    } else {
+      // Wait for potential second click
+      const timeout = setTimeout(() => {
+        setEditClickCount(0);
+        setEditClickTimeout(null);
+      }, 300);
+      setEditClickTimeout(timeout);
+    }
+  }, [onEdit, step.id, step.step_type, step.custom_text, editClickCount, editClickTimeout]);
 
   const {
     attributes,
@@ -171,14 +200,18 @@ const SortableTaskItem = memo(function SortableTaskItem({
 
       {playerIds.length > 0 && !isPreviewStep && (
         <div className="flex gap-2.5">
-          {playerIds.map((playerId) => {
+          {playerIds.map((playerId, index) => {
             const state = (
               step.player_state as Record<string, boolean | null>
             )[playerId];
             const checkboxKey = `${step.id}-${playerId}`;
             const isBouncing = bouncingCheckbox === checkboxKey;
             return (
-              <div key={playerId} className="w-24 flex justify-center">
+              <div
+                key={playerId}
+                className="flex justify-center"
+                style={{ width: `var(--player-${index + 1}-width)` }}
+              >
                 <input
                   type="checkbox"
                   checked={state === true}
@@ -197,6 +230,24 @@ const SortableTaskItem = memo(function SortableTaskItem({
             );
           })}
         </div>
+      )}
+
+      {!isPreviewStep && step.step_type === 'custom' && (
+        <Tooltip text="Double-Click to Edit" position="top">
+          <button
+            onClick={handleEditClick}
+            className="opacity-0 group-hover:opacity-100 transition-all w-5 h-5 rounded flex items-center justify-center flex-shrink-0 bg-[var(--bg-surface)] hover:bg-[var(--gold)] border border-[var(--border-standard)]"
+            title="Edit custom task"
+            aria-label="Edit custom task"
+            style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}
+          >
+            <Pencil size={10} className="text-[var(--text-tertiary)]" />
+          </button>
+        </Tooltip>
+      )}
+
+      {!isPreviewStep && step.step_type !== 'custom' && (
+        <div className="w-5 h-5 flex-shrink-0" style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }} />
       )}
 
       {!isPreviewStep && (

@@ -33,6 +33,7 @@ export interface RouteTaskListProps {
   onToggleCheckbox: (stepId: string, playerId: string) => void;
   onDelete: (stepId: string) => void;
   onDeleteClick: (stepId: string) => void;
+  onEdit?: (stepId: string, currentText: string) => void;
   onToggleMilestoneCheckbox: (milestoneId: string, playerId: string) => void;
   onMilestoneSelection: (milestoneId: string, selectedId: number | null) => void;
 }
@@ -56,6 +57,7 @@ export default function RouteTaskList({
   onToggleCheckbox,
   onDelete,
   onDeleteClick,
+  onEdit,
   onToggleMilestoneCheckbox,
   onMilestoneSelection,
 }: RouteTaskListProps) {
@@ -79,15 +81,17 @@ export default function RouteTaskList({
             Total
           </div>
           <div className="flex gap-2.5">
-            {playerIds.map((playerId) => (
+            {playerIds.map((playerId, index) => (
               <div
                 key={playerId}
-                className="w-24 text-center text-xs font-bold text-[var(--text-secondary)] truncate"
+                className="text-center text-xs font-bold text-[var(--text-secondary)] truncate max-w-[12ch]"
+                style={{ width: `var(--player-${index + 1}-width)` }}
               >
                 {playerNames[playerId]}
               </div>
             ))}
           </div>
+          <div className="w-5 flex-shrink-0" style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}></div>
           <div className="w-5 flex-shrink-0" style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}></div>
         </div>
       )}
@@ -138,6 +142,7 @@ export default function RouteTaskList({
                   onToggleCheckbox={onToggleCheckbox}
                   onDelete={onDelete}
                   onDeleteClick={onDeleteClick}
+                  onEdit={onEdit}
                   completedSteps={completedSteps}
                   isInsertAnimating={insertAnimatingIds.has(step.id)}
                   isPreviewStep={isPreview}

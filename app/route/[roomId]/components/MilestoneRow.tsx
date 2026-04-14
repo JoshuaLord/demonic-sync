@@ -161,12 +161,16 @@ const MilestoneRow = memo(function MilestoneRow({
 
       {playerIds.length > 0 && (
         <div className="flex gap-2.5">
-          {playerIds.map((playerId) => {
+          {playerIds.map((playerId, index) => {
             const state = milestonePlayerState[milestone.id]?.[playerId] || false;
             const checkboxKey = `${milestone.id}-${playerId}`;
             const isBouncing = bouncingCheckbox === checkboxKey;
             return (
-              <div key={playerId} className="w-24 flex justify-center">
+              <div
+                key={playerId}
+                className="flex justify-center"
+                style={{ width: `var(--player-${index + 1}-width)` }}
+              >
                 <input
                   type="checkbox"
                   checked={state}
@@ -186,6 +190,7 @@ const MilestoneRow = memo(function MilestoneRow({
         </div>
       )}
 
+      <div className="w-5 flex-shrink-0" style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}></div>
       <div className="w-5 flex-shrink-0" style={{ visibility: mounted && isAdmin ? 'visible' : 'hidden' }}></div>
     </div>
   );

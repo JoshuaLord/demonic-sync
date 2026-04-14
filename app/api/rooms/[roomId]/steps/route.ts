@@ -224,6 +224,28 @@ export async function PATCH(
       return NextResponse.json({ ok: true });
     }
 
+    case 'update_custom_text': {
+      const stepId = body.stepId;
+      const customText = body.customText;
+      if (!stepId || typeof stepId !== 'string' || !isValidUUID(stepId)) {
+        return NextResponse.json({ error: 'Invalid step ID' }, { status: 400 });
+      }
+      if (typeof customText !== 'string' || customText.length === 0 || customText.length > 500) {
+        return NextResponse.json({ error: 'custom_text must be 1-500 characters' }, { status: 400 });
+      }
+      const { error } = await supabaseAdmin
+        .from('route_steps')
+        .update({ custom_text: customText })
+        .eq('id', stepId)
+        .eq('room_id', roomId)
+        .eq('step_type', 'custom');
+      if (error) {
+        console.error('Error updating custom text:', error);
+        return NextResponse.json({ error: 'Failed to update custom text' }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true });
+    }
+
     default:
       return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   }
