@@ -90,15 +90,15 @@ describe('calculateMilestones', () => {
   });
 
   it('injects area unlocks at correct positions based on task count', () => {
-    // Create 90 tasks to reach Area Unlock 1
-    const steps = Array.from({ length: 91 }, (_, i) => task(`t${i}`, 10));
+    // Create 200 tasks to reach Area Unlock 1
+    const steps = Array.from({ length: 201 }, (_, i) => task(`t${i}`, 10));
     const milestones = calculateMilestones(steps);
 
     const areaU1 = milestones.find((m) => m.id === 'area_u1');
     expect(areaU1).toBeDefined();
     expect(areaU1!.type).toBe('area');
-    expect(areaU1!.insertAfterIndex).toBe(89); // 90th task (index 89) reaches 90 tasks
-    expect(areaU1!.currentProgress).toBe(90);
+    expect(areaU1!.insertAfterIndex).toBe(199); // 200th task (index 199) reaches 200 tasks
+    expect(areaU1!.currentProgress).toBe(200);
   });
 
   it('does not include milestones that have not been reached', () => {
@@ -111,7 +111,7 @@ describe('calculateMilestones', () => {
   });
 
   it('includes multiple relic tiers when enough points', () => {
-    // 1500 points total - should reach T1, T2, T3
+    // 1600 points total - should reach T1, T2, T3
     const steps = [task('a', 800), task('b', 800)]; // 800, 1600
     const milestones = calculateMilestones(steps);
 
@@ -119,12 +119,12 @@ describe('calculateMilestones', () => {
     expect(relicIds).toContain('relic_t1');
     expect(relicIds).toContain('relic_t2');
     expect(relicIds).toContain('relic_t3');
-    expect(relicIds).not.toContain('relic_t4'); // 2500 not reached
+    expect(relicIds).not.toContain('relic_t4'); // 2600 not reached
   });
 
   it('handles reaching all relic tiers', () => {
-    // Create enough points to reach all 8 tiers (25000+)
-    const steps = Array.from({ length: 26 }, (_, i) => task(`t${i}`, 1000));
+    // Create enough points to reach all 8 tiers (28000+)
+    const steps = Array.from({ length: 29 }, (_, i) => task(`t${i}`, 1000));
     const milestones = calculateMilestones(steps);
 
     const relicMilestones = milestones.filter((m) => m.type === 'relic');
@@ -210,7 +210,7 @@ describe('mergeStepsWithMilestones', () => {
       id: 'area_u1',
       type: 'area',
       tier: 1,
-      threshold: 90,
+      threshold: 200,
       label: 'Area Unlock 1',
       insertAfterIndex: 0,
       currentProgress: 1,
@@ -231,7 +231,7 @@ describe('mergeStepsWithMilestones', () => {
       id: 'relic_t3',
       type: 'relic',
       tier: 3,
-      threshold: 1500,
+      threshold: 1200,
       label: 'Relic Tier 3',
       insertAfterIndex: 1,
       currentProgress: 300,
@@ -291,11 +291,11 @@ describe('constants', () => {
   });
 
   it('has correct relic tier thresholds', () => {
-    const expected = [0, 600, 1500, 2500, 5000, 8000, 16000, 25000];
+    const expected = [0, 600, 1200, 2600, 5200, 8500, 16500, 28000];
     expect(RELIC_TIERS.map((t) => t.threshold)).toEqual(expected);
   });
 
   it('has correct area unlock thresholds', () => {
-    expect(AREA_UNLOCKS.map((a) => a.threshold)).toEqual([90, 200, 400]);
+    expect(AREA_UNLOCKS.map((a) => a.threshold)).toEqual([200, 350, 450]);
   });
 });

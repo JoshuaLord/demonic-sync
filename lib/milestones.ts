@@ -17,12 +17,12 @@ export interface Milestone {
 export const RELIC_TIERS = [
   { tier: 1, threshold: 0, label: 'Relic Tier 1' },
   { tier: 2, threshold: 600, label: 'Relic Tier 2' },
-  { tier: 3, threshold: 1500, label: 'Relic Tier 3' },
-  { tier: 4, threshold: 2500, label: 'Relic Tier 4' },
-  { tier: 5, threshold: 5000, label: 'Relic Tier 5' },
-  { tier: 6, threshold: 8000, label: 'Relic Tier 6' },
-  { tier: 7, threshold: 16000, label: 'Relic Tier 7' },
-  { tier: 8, threshold: 25000, label: 'Relic Tier 8' },
+  { tier: 3, threshold: 1200, label: 'Relic Tier 3' },
+  { tier: 4, threshold: 2600, label: 'Relic Tier 4' },
+  { tier: 5, threshold: 5200, label: 'Relic Tier 5' },
+  { tier: 6, threshold: 8500, label: 'Relic Tier 6' },
+  { tier: 7, threshold: 16500, label: 'Relic Tier 7' },
+  { tier: 8, threshold: 28000, label: 'Relic Tier 8' },
 ];
 
 // Karamja starter area (task-count-based, auto-unlocked)
@@ -33,9 +33,9 @@ export const KARAMJA_UNLOCK = {
 
 // Area unlock thresholds (task-count-based)
 export const AREA_UNLOCKS = [
-  { tier: 1, threshold: 90, label: 'Area Unlock 1' },
-  { tier: 2, threshold: 200, label: 'Area Unlock 2' },
-  { tier: 3, threshold: 400, label: 'Area Unlock 3' },
+  { tier: 1, threshold: 200, label: 'Area Unlock 1' },
+  { tier: 2, threshold: 350, label: 'Area Unlock 2' },
+  { tier: 3, threshold: 450, label: 'Area Unlock 3' },
 ];
 
 interface RouteStep {
