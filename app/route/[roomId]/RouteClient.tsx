@@ -1395,6 +1395,7 @@ export default function RouteClient({
                       onCollapse={toggleLibrary}
                       position={libraryPosition}
                       routeSteps={steps}
+                      draggingTaskId={draggedRouteStep?.task_id}
                     />
                   ) : sidebarTab === 'unlocks' ? (
                     <BuildPlanner

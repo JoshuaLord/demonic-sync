@@ -33,6 +33,7 @@ interface TaskLibraryProps {
   onCollapse?: () => void;
   position?: 'sidebar' | 'bottom';
   routeSteps: RouteStep[];
+  draggingTaskId?: number | null;
 }
 
 interface DraggableTaskCardProps {
@@ -118,8 +119,28 @@ const DraggableTaskCard = memo(function DraggableTaskCard({ task, isAdmin, onAdd
   );
 });
 
-export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTask, onCollapse, position = 'sidebar', routeSteps }: TaskLibraryProps) {
+const STORAGE_KEY = 'task_library_filters';
+
+interface SavedFilters {
+  searchQuery?: string;
+  selectedRegions?: string[];
+  selectedTiers?: string[];
+  selectedSkill?: string | null;
+  selectedLeague?: 'demonic' | 'echoes';
+  showPactOnly?: boolean;
+}
+
+function loadFilters(): SavedFilters {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return {};
+}
+
+export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTask, onCollapse, position = 'sidebar', routeSteps, draggingTaskId }: TaskLibraryProps) {
   const [tasks, setTasks] = useState<OfficialTask[]>([]);
+  const [filtersLoaded, setFiltersLoaded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedTiers, setSelectedTiers] = useState<string[]>([]);
@@ -130,6 +151,32 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
   const [bouncingChip, setBouncingChip] = useState<string | null>(null);
   const [selectedLeague, setSelectedLeague] = useState<'demonic' | 'echoes'>('demonic');
   const [showPactOnly, setShowPactOnly] = useState(false);
+
+  // Load saved filters from localStorage on mount
+  useEffect(() => {
+    const saved = loadFilters();
+    if (saved.searchQuery) setSearchQuery(saved.searchQuery);
+    if (saved.selectedRegions?.length) setSelectedRegions(saved.selectedRegions);
+    if (saved.selectedTiers?.length) setSelectedTiers(saved.selectedTiers);
+    if (saved.selectedSkill !== undefined) setSelectedSkill(saved.selectedSkill);
+    if (saved.selectedLeague) setSelectedLeague(saved.selectedLeague);
+    if (saved.showPactOnly) setShowPactOnly(saved.showPactOnly);
+    setFiltersLoaded(true);
+  }, []);
+
+  // Persist filters to localStorage when they change
+  useEffect(() => {
+    if (!filtersLoaded) return;
+    const filters: SavedFilters = {
+      searchQuery,
+      selectedRegions,
+      selectedTiers,
+      selectedSkill,
+      selectedLeague,
+      showPactOnly,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
+  }, [filtersLoaded, searchQuery, selectedRegions, selectedTiers, selectedSkill, selectedLeague, showPactOnly]);
 
   // Fetch tasks filtered by league
   useEffect(() => {
@@ -164,12 +211,13 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
   const filteredTasks = useMemo(() => {
     let result = [...tasks];
 
-    // Filter out tasks already added to route
+    // Filter out tasks already added to route (or currently being dragged from route)
     const usedTaskIds = new Set(
       routeSteps
         .filter(step => step.task_id !== null)
         .map(step => step.task_id)
     );
+    if (draggingTaskId) usedTaskIds.add(draggingTaskId);
     result = result.filter(task => !usedTaskIds.has(task.id));
 
     // Pact-only filter
@@ -203,7 +251,7 @@ export default function TaskLibrary({ roomId, isAdmin, onAddTask, onAddCustomTas
     }
 
     return result;
-  }, [tasks, routeSteps, searchQuery, selectedRegions, selectedTiers, selectedSkill, showPactOnly]);
+  }, [tasks, routeSteps, draggingTaskId, searchQuery, selectedRegions, selectedTiers, selectedSkill, showPactOnly]);
 
   // Get unique values for filters
   const regions = useMemo(() => Array.from(new Set(tasks.map((t) => t.region))).sort((a, b) => {
