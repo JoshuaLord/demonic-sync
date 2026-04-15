@@ -213,13 +213,24 @@ export async function PATCH(
           return NextResponse.json({ error: 'Invalid step update format' }, { status: 400 });
         }
       }
-      const { error } = await supabaseAdmin.rpc('reorder_route_steps', {
-        p_room_id: roomId,
-        step_updates: stepUpdates,
-      });
-      if (error) {
-        console.error('Error reordering steps:', JSON.stringify(error, null, 2));
-        return NextResponse.json({ error: 'Failed to reorder steps', details: error.message, code: error.code }, { status: 500 });
+
+      // Perform individual updates - each reliably triggers a Realtime event
+      const errors: string[] = [];
+      for (const item of stepUpdates) {
+        const { error } = await supabaseAdmin
+          .from('route_steps')
+          .update({ step_order: item.step_order })
+          .eq('id', item.id)
+          .eq('room_id', roomId);
+        if (error) errors.push(`${item.id}: ${error.message}`);
+      }
+
+      if (errors.length > 0) {
+        console.error('Errors reordering steps:', errors);
+        return NextResponse.json(
+          { error: 'Some steps failed to reorder', details: errors },
+          { status: 500 }
+        );
       }
       return NextResponse.json({ ok: true });
     }

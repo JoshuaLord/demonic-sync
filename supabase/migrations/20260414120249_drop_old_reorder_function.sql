@@ -1,0 +1,2 @@
+-- Intentionally empty: old function drop is handled by
+-- the fix_reorder_realtime_sync migration instead.
